@@ -352,7 +352,7 @@ body {
   gap: 6px;
   flex-wrap: nowrap;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .bubble-title-text {
@@ -361,7 +361,7 @@ body {
   gap: 6px;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .bubble-title-text b {
@@ -377,6 +377,33 @@ body {
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
+  position: relative;
+  display: inline-block;
+}
+
+/* Tooltip styles */
+.tooltip {
+  position: fixed;
+  padding: 4px 8px;
+  background: var(--vscode-editorHoverWidget-background);
+  color: var(--vscode-editorHoverWidget-foreground);
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+.tooltip.show {
+  opacity: 1;
+  visibility: visible;
 }
 
 .bubble-toggle {

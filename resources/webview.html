@@ -317,7 +317,7 @@
       header.className = "bubble-collapsible-header";
 
       const titleText = paramsMd
-        ? `<b>${escapeHtml(toolName)}</b> <span class="tool-params">${escapeHtml(paramsMd)}</span>`
+        ? `<b>${escapeHtml(toolName)}</b> <span class="tool-params" data-tip="${escapeHtml(paramsMd)}">${escapeHtml(paramsMd)}</span>`
         : `<b>${escapeHtml(toolName)}</b>`;
 
       const dotClasses = ["bubble-dot"];
@@ -369,6 +369,12 @@
 
       bubble.appendChild(header);
       bubble.appendChild(contentDiv);
+
+      // 添加 tool-params tooltip 事件监听
+      const toolParams = header.querySelector(".tool-params");
+      if (toolParams && toolParams.dataset.tip) {
+        addToolParamsTooltip(toolParams);
+      }
     }
 
     messages.appendChild(bubble);
@@ -422,6 +428,73 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function addToolParamsTooltip(element) {
+    const tooltipText = element.dataset.tip;
+    if (!tooltipText) return;
+
+    let tooltip = null;
+    let showTimer = null;
+
+    function updateTooltipPosition() {
+      if (!tooltip) return;
+      const rect = element.getBoundingClientRect();
+      tooltip.style.left = rect.left + 'px';
+      tooltip.style.top = (rect.bottom + 10) + 'px';
+    }
+
+    element.addEventListener('mouseenter', () => {
+      // 清除旧的延迟任务
+      if (showTimer) {
+        clearTimeout(showTimer);
+      }
+
+      // 延迟 500ms 后显示 tooltip
+      showTimer = setTimeout(() => {
+        if (tooltip) {
+          tooltip.remove();
+        }
+        tooltip = document.createElement('div');
+        tooltip.className = 'tooltip show';
+        tooltip.textContent = tooltipText;
+        document.body.appendChild(tooltip);
+        
+        // 下一帧时更新位置，确保元素已渲染
+        requestAnimationFrame(() => {
+          updateTooltipPosition();
+        });
+
+        // 监听窗口大小变化和滚动
+        const handleUpdate = () => updateTooltipPosition();
+        window.addEventListener('resize', handleUpdate);
+        window.addEventListener('scroll', handleUpdate, true);
+
+        const handleMouseLeave = () => {
+          if (tooltip) {
+            tooltip.remove();
+            tooltip = null;
+          }
+          window.removeEventListener('resize', handleUpdate);
+          window.removeEventListener('scroll', handleUpdate, true);
+          element.removeEventListener('mouseleave', handleMouseLeave);
+        };
+
+        element.addEventListener('mouseleave', handleMouseLeave);
+      }, 500);
+    });
+
+    element.addEventListener('mouseleave', () => {
+      // 鼠标离开时清除延迟任务和 tooltip
+      if (showTimer) {
+        clearTimeout(showTimer);
+        showTimer = null;
+      }
+      if (tooltip) {
+        tooltip.remove();
+        tooltip = null;
+      }
+    });
   }
 
   function setLoading(isLoading, status) {
@@ -885,7 +958,6 @@
           .filter((m) => m && m.role === "user" && typeof m.content === "string")
           .map((m) => m.content)
           .filter((t) => t && t.trim());
-          console.log("Rebuilt input history from session messages:", inputHistory);
         historyCursor = -1;
         draftBeforeHistory = null;
         pendingUserPrompt = null;
@@ -1008,7 +1080,6 @@
     } else if (message.type === "skillsList") {
       // 接收可用技能列表
       availableSkills = message.skills || [];
-      console.log("Received skills list:", availableSkills);
       updateSkillsButtonTooltip();
     }
   });
