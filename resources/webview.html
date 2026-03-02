@@ -87,6 +87,14 @@
   const skillsPopupList = document.getElementById("skillsPopupList");
   const skillsTags = document.getElementById("skillsTags");
 
+  // Prompt history navigation (ArrowUp/ArrowDown)
+  let inputHistory = []; // user prompts in the current session, oldest -> newest
+  let historyCursor = -1; // -1 means not browsing history; otherwise 0..inputHistory.length-1
+  let draftBeforeHistory = null; // preserved draft when entering history browsing
+  let pendingUserPrompt = null; // last prompt sent, used to reduce double-recording
+  let lastHistoryRecordText = "";
+  let lastHistoryRecordAt = 0;
+
   let currentSessionId = null;
   let currentSessionStatus = null;
   let allSessions = [];
@@ -713,6 +721,11 @@
       return;
     }
 
+    // Reset history browsing state when sending
+    historyCursor = -1;
+    draftBeforeHistory = null;
+    pendingUserPrompt = text;
+
     // 发送消息，不立即显示（等待后端返回渲染后的 HTML）
     promptInput.value = "";
     vscode.setState({ promptText: "" });
@@ -736,10 +749,71 @@
     sessionDropdown.classList.remove("show");
     sessionSelector.classList.remove("open");
     vscode.postMessage({ type: "createNewSession" });
+    promptInput.value = "";
+    inputHistory = [];
+    historyCursor = -1;
+    draftBeforeHistory = null;
+    pendingUserPrompt = null;
+    updateSendIconState();
   });
 
   sendButton.addEventListener("click", sendPrompt);
   promptInput.addEventListener("keydown", (event) => {
+    // History navigation: only intercept ArrowUp/Down at the very start/end of the textarea.
+    // Otherwise keep native cursor movement (line up/down).
+    const noModifier = !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+
+    function isCaretCollapsedAtStart(el) {
+      return el.selectionStart === 0 && el.selectionEnd === 0;
+    }
+
+    function isCaretCollapsedAtEnd(el) {
+      const len = el.value.length;
+      return el.selectionStart === len && el.selectionEnd === len;
+    }
+
+    function applyPromptValue(value, caret = "end") {
+      promptInput.value = value;
+      vscode.setState({ promptText: promptInput.value });
+      updateSendIconState();
+      promptInput.focus();
+      const len = promptInput.value.length;
+      if (caret === "start") {
+        promptInput.setSelectionRange(0, 0);
+      } else {
+        promptInput.setSelectionRange(len, len);
+      }
+    }
+
+    function navigateHistory(direction) {
+      if (!inputHistory || inputHistory.length === 0) {
+        return;
+      }
+
+      // Enter history browsing mode
+      if (historyCursor === -1) {
+        draftBeforeHistory = promptInput.value;
+        historyCursor = inputHistory.length; // virtual position after the last item
+      }
+
+      historyCursor += direction;
+
+      // Clamp: [0..inputHistory.length]
+      if (historyCursor < 0) historyCursor = 0;
+      if (historyCursor > inputHistory.length) historyCursor = inputHistory.length;
+
+      if (historyCursor === inputHistory.length) {
+        // Restore draft and exit history mode
+        applyPromptValue(draftBeforeHistory ?? "", "end");
+        historyCursor = -1;
+        draftBeforeHistory = null;
+        return;
+      }
+
+      // ArrowUp-triggered navigation is more convenient with caret at start for repeated browsing.
+      applyPromptValue(inputHistory[historyCursor] ?? "", direction < 0 ? "start" : "end");
+    }
+
     if (event.key === "Enter") {
       if (event.shiftKey) {
         // Shift+回车：允许换行（默认行为）
@@ -748,6 +822,17 @@
         // 回车：发送消息
         event.preventDefault();
         sendPrompt();
+      }
+    } else if (event.key === "ArrowUp" && noModifier) {
+      if ((historyCursor !== -1 || isCaretCollapsedAtStart(promptInput)) && inputHistory.length > 0) {
+        event.preventDefault();
+        navigateHistory(-1);
+      }
+    } else if (event.key === "ArrowDown" && noModifier) {
+      // Only navigate forward if we're already in history browsing mode
+      if (historyCursor !== -1 || isCaretCollapsedAtEnd(promptInput)) {
+        event.preventDefault();
+        navigateHistory(1);
       }
     }
   });
@@ -773,6 +858,12 @@
       currentSessionId = null;
       currentSessionStatus = message.status || null;
       setLoading(false, currentSessionStatus);
+
+      // Reset history for new conversation
+      inputHistory = [];
+      historyCursor = -1;
+      draftBeforeHistory = null;
+      pendingUserPrompt = null;
       // 如果消息中包含sessions，更新下拉框
       if (message.sessions && Array.isArray(message.sessions)) {
         updateSessionDropdown(message.sessions);
@@ -789,6 +880,16 @@
 
       // 加载历史消息
       if (message.messages && Array.isArray(message.messages)) {
+        // Rebuild user input history from session messages
+        inputHistory = message.messages
+          .filter((m) => m && m.role === "user" && typeof m.content === "string")
+          .map((m) => m.content)
+          .filter((t) => t && t.trim());
+          console.log("Rebuilt input history from session messages:", inputHistory);
+        historyCursor = -1;
+        draftBeforeHistory = null;
+        pendingUserPrompt = null;
+
         message.messages.forEach((msg, index) => {
           // 判断是否需要连接到上一个消息
           let shouldConnect = false;
@@ -838,6 +939,24 @@
     } else if (message.type === "userMessage") {
       // 显示用户消息（纯文本）
       addBubble(message.content || "", "user", message.meta, false);
+
+      // Record user message into history
+      if (typeof message.content === "string") {
+        // Inline helper to avoid hoisting issues: duplicate minimal recording logic
+        const text = message.content;
+        const now = Date.now();
+        if (pendingUserPrompt !== null && text === pendingUserPrompt) {
+          inputHistory.push(text);
+          pendingUserPrompt = null;
+          lastHistoryRecordText = text;
+          lastHistoryRecordAt = now;
+        } else if (!(text === lastHistoryRecordText && (now - lastHistoryRecordAt) < 500) && text.trim()) {
+          inputHistory.push(text);
+          lastHistoryRecordText = text;
+          lastHistoryRecordAt = now;
+          pendingUserPrompt = null;
+        }
+      }
     } else if (message.type === "assistant") {
       // 接收助手回复
       const shouldConnect = lastMessageRole !== null && lastMessageRole !== "user";
@@ -849,6 +968,23 @@
     } else if(message.type === "appendMessage") {
       // 新增消息
       addMessageBubble(message.message, message.shouldConnect);
+
+      // Record appended user message into history (when backend sends user messages via appendMessage)
+      if (message.message && message.message.role === "user" && typeof message.message.content === "string") {
+        const text = message.message.content;
+        const now = Date.now();
+        if (pendingUserPrompt !== null && text === pendingUserPrompt) {
+          inputHistory.push(text);
+          pendingUserPrompt = null;
+          lastHistoryRecordText = text;
+          lastHistoryRecordAt = now;
+        } else if (!(text === lastHistoryRecordText && (now - lastHistoryRecordAt) < 500) && text.trim()) {
+          inputHistory.push(text);
+          lastHistoryRecordText = text;
+          lastHistoryRecordAt = now;
+          pendingUserPrompt = null;
+        }
+      }
       
       // 如果是普通 assistant 消息（不是思考），说明本轮回复已完成，标记为 completed
       if (message.message.role === "assistant" && message.message.meta?.asThinking !== true) {
