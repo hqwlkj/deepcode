@@ -576,8 +576,8 @@ body {
 
 .composer-footer {
   display: flex;
-  height: 22px;
-  width: calc(100% - 24px);
+  height: 34px;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -630,8 +630,18 @@ textarea::placeholder {
 .send-icon {
   width: 16px;
   height: 16px;
-  fill: var(--vscode-foreground);
+  fill: currentColor;
+  color: var(--vscode-foreground);
   transition: opacity 0.2s;
+}
+
+#sendIcon {
+  color: var(--vscode-descriptionForeground);
+}
+
+#stopIcon {
+  display: none;
+  color: var(--vscode-foreground);
 }
 
 .send-icon.empty {
