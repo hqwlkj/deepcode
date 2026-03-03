@@ -32,6 +32,10 @@ Deep Code 支持 agent skills，允许您扩展助手的能力：
 - `deepseek-chat`
 - 任何其他 OpenAI 兼容模型
 
+## 截图示例
+
+![screenshot](resources/deepcode_screenshot.png)
+
 ## 常见问题：如何将 Deep Code 从左侧边栏移动到右侧边栏（Secondary Side Bar）？
 
 ![faq1](resources/faq1.gif)

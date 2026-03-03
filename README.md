@@ -32,6 +32,10 @@ Deep Code supports agent skills that allows you to extend the assistant's capabi
 - `deepseek-chat`
 - Any other OpenAI-compatible model
 
+## Screenshot
+
+![screenshot](resources/deepcode_screenshot.png)
+
 ## FAQ: How can I move Deep Code from the left sidebar to the right (Secondary Side Bar) in VS Code?
 
 ![faq1](resources/faq1.gif)
