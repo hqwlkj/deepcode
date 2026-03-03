@@ -63,12 +63,16 @@ export async function handleWriteTool(
     }
   }
 
+  const normalizedContent = content.length > 0 && !content.endsWith("\n")
+    ? `${content}\n`
+    : content;
+
   try {
-    fs.writeFileSync(filePath, content, "utf8");
+    fs.writeFileSync(filePath, normalizedContent, "utf8");
     return {
       ok: true,
       name: "write",
-      output: `Wrote ${Buffer.byteLength(content, "utf8")} bytes to ${filePath}.`
+      output: `Wrote ${Buffer.byteLength(normalizedContent, "utf8")} bytes to ${filePath}.`
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

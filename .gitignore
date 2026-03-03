@@ -4,3 +4,4 @@ out/
 .DS_Store
 *.vsix
 .idea
+deploy.ps1

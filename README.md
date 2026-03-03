@@ -9,7 +9,7 @@ Create `~/.deepcode/settings.json` with:
 ```json
 {
   "env": {
-    "MODEL": "deepseek-chat",
+    "MODEL": "deepseek-reasoner",
     "BASE_URL": "https://api.deepseek.com",
     "API_KEY": "sk-..."
   }
@@ -28,7 +28,7 @@ Deep Code supports agent skills that allows you to extend the assistant's capabi
 - Reduce costs by using [Context Caching](https://api-docs.deepseek.com/guides/kv_cache).
 
 ## Supported Models
-- `deepseek-reasoner` (thinking mode, recommended)
+- `deepseek-reasoner` ([thinking mode](https://api-docs.deepseek.com/guides/kv_cache), recommended)
 - `deepseek-chat`
 - Any other OpenAI-compatible model
 
