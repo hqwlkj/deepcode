@@ -95,8 +95,7 @@ export class SessionManager {
 
   async listSkills(): Promise<SkillInfo[]> {
     const homeDir = os.homedir();
-    const claudeRoot = path.join(homeDir, ".claude", "skills");
-    const deepcodeRoot = path.join(homeDir, ".deepcode", "skills");
+    const agentsRoot = path.join(homeDir, ".agents", "skills");
     const skillsByName = new Map<string, SkillInfo>();
 
     const collectSkills = (root: string, displayRoot: string): SkillInfo[] => {
@@ -136,10 +135,7 @@ export class SessionManager {
       return results;
     };
 
-    for (const skill of collectSkills(claudeRoot, "~/.claude/skills")) {
-      skillsByName.set(skill.name, skill);
-    }
-    for (const skill of collectSkills(deepcodeRoot, "~/.deepcode/skills")) {
+    for (const skill of collectSkills(agentsRoot, "~/.agents/skills")) {
       skillsByName.set(skill.name, skill);
     }
 

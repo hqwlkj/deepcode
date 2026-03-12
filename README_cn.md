@@ -21,7 +21,7 @@
 ### **Skills**
 Deep Code 支持 agent skills，允许您扩展助手的能力：
 
-- **Skill Discovery**：可以从 `~/.deepcode/skills/` 和 `~/.claude/skills/` 目录中发现并激活 skills。
+- **Skill Discovery**：可以从 `~/.agents/skills/` 目录中发现并激活 skills。
 
 ### **为 DeepSeek 优化**
 - 专门为 DeepSeek 模型性能调优。
