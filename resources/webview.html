@@ -316,7 +316,7 @@
       header.className = "bubble-collapsible-header";
 
       const titleText = paramsMd
-        ? `<b>${escapeHtml(toolName)}</b> <span class="tool-params" data-tip="${escapeHtml(paramsMd)}">${escapeHtml(paramsMd)}</span>`
+        ? `<b>${escapeHtml(toolName)}</b> <span class="tool-params">${escapeHtml(paramsMd)}</span>`
         : `<b>${escapeHtml(toolName)}</b>`;
 
       const dotClasses = ["bubble-dot"];
@@ -369,9 +369,9 @@
       bubble.appendChild(header);
       bubble.appendChild(contentDiv);
 
-      // 添加 tool-params tooltip 事件监听
       const toolParams = header.querySelector(".tool-params");
-      if (toolParams && toolParams.dataset.tip) {
+      if (toolParams && paramsMd) {
+        toolParams.dataset.tip = paramsMd;
         addToolParamsTooltip(toolParams);
       }
     }
