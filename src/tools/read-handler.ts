@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import ignore from "ignore";
 import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
-import { markFileRead } from "./state";
+import { createSnippet, markFileRead } from "./state";
 
 const DEFAULT_LINE_LIMIT = 2000;
 const MAX_LINE_LENGTH = 2000;
@@ -38,6 +38,12 @@ type PageRange = {
   start: number;
   end: number;
   count: number;
+};
+
+type TextReadResult = {
+  output: string;
+  startLine: number;
+  endLine: number;
 };
 
 export async function handleReadTool(
@@ -219,12 +225,29 @@ export async function handleReadTool(
       };
     }
 
-    const output = readTextFile(filePath, offset.value, limit.value);
+    const textResult = readTextFile(filePath, offset.value, limit.value);
     markFileRead(context.sessionId, filePath);
+    const snippet = createSnippet(
+      context.sessionId,
+      filePath,
+      textResult.startLine,
+      textResult.endLine,
+      textResult.output
+    );
     return {
       ok: true,
       name: "read",
-      output
+      output: textResult.output,
+      metadata: snippet
+        ? {
+            snippet: {
+              id: snippet.id,
+              filePath: snippet.filePath,
+              startLine: snippet.startLine,
+              endLine: snippet.endLine
+            }
+          }
+        : undefined
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -359,21 +382,35 @@ function parseLineLimit(
   return { ok: true, value: integer };
 }
 
-function readTextFile(filePath: string, offset: number | null, limit: number): string {
+function readTextFile(filePath: string, offset: number | null, limit: number): TextReadResult {
   const raw = fs.readFileSync(filePath, "utf8");
   if (!raw) {
-    return "WARNING: File is empty.";
+    return {
+      output: "WARNING: File is empty.",
+      startLine: offset ?? 1,
+      endLine: offset ?? 1
+    };
   }
 
   const lines = raw.split(/\r?\n/);
   if (lines.length === 1 && lines[0] === "") {
-    return "WARNING: File is empty.";
+    return {
+      output: "WARNING: File is empty.",
+      startLine: offset ?? 1,
+      endLine: offset ?? 1
+    };
   }
 
   const startIndex = offset ? offset - 1 : 0;
   const endIndex = startIndex + limit;
   const selected = lines.slice(startIndex, endIndex);
-  return formatWithLineNumbers(selected, startIndex + 1);
+  const startLine = startIndex + 1;
+  const endLine = selected.length > 0 ? startIndex + selected.length : startLine;
+  return {
+    output: formatWithLineNumbers(selected, startLine),
+    startLine,
+    endLine
+  };
 }
 
 function formatWithLineNumbers(lines: string[], startLineNumber: number): string {

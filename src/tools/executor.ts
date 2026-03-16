@@ -1,8 +1,15 @@
+import type OpenAI from "openai";
 import { handleAskUserQuestionTool } from "./ask-user-question-handler";
 import { handleBashTool } from "./bash-handler";
 import { handleEditTool } from "./edit-handler";
 import { handleReadTool } from "./read-handler";
 import { handleWriteTool } from "./write-handler";
+
+export type CreateOpenAIClient = () => {
+  client: OpenAI | null;
+  model: string;
+  thinkingEnabled?: boolean;
+};
 
 export type ToolCall = {
   id: string;
@@ -17,6 +24,7 @@ export type ToolExecutionContext = {
   sessionId: string;
   projectRoot: string;
   toolCall: ToolCall;
+  createOpenAIClient?: CreateOpenAIClient;
   onProcessStart?: (pid: number) => void;
   onProcessExit?: (pid: number) => void;
 };
@@ -48,10 +56,12 @@ export type ToolCallExecution = {
 
 export class ToolExecutor {
   private readonly projectRoot: string;
+  private readonly createOpenAIClient?: CreateOpenAIClient;
   private readonly toolHandlers = new Map<string, ToolHandler>();
 
-  constructor(projectRoot: string) {
+  constructor(projectRoot: string, createOpenAIClient?: CreateOpenAIClient) {
     this.projectRoot = projectRoot;
+    this.createOpenAIClient = createOpenAIClient;
     this.registerToolHandlers();
   }
 
@@ -150,6 +160,7 @@ export class ToolExecutor {
         sessionId,
         projectRoot: this.projectRoot,
         toolCall,
+        createOpenAIClient: this.createOpenAIClient,
         onProcessStart: hooks?.onProcessStart,
         onProcessExit: hooks?.onProcessExit
       });

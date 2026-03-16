@@ -329,17 +329,21 @@ export function getTools(): ToolDefinition[] {
       type: "function",
       function: {
         name: "edit",
-        description: "Perform exact string replacements in files.",
+        description: "Perform scoped string replacements in files.",
         parameters: {
           type: "object",
           properties: {
             file_path: {
               type: "string",
-              description: "Absolute path to file",
+              description: "Absolute path to file. Optional when snippet_id is provided.",
+            },
+            snippet_id: {
+              type: "string",
+              description: "Snippet id returned by the Read or Edit tool to scope the search range.",
             },
             old_string: {
               type: "string",
-              description: "Exact text to replace",
+              description: "Exact text to replace inside the file or snippet scope",
             },
             new_string: {
               type: "string",
@@ -351,8 +355,13 @@ export function getTools(): ToolDefinition[] {
                 "Replace all occurences of old_string (default false)",
               default: false,
             },
+            expected_occurrences: {
+              type: "number",
+              description:
+                "Expected number of matches, especially useful as a safety check with replace_all",
+            },
           },
-          required: ["file_path", "old_string", "new_string"],
+          required: ["old_string", "new_string"],
           additionalProperties: false,
         },
       },

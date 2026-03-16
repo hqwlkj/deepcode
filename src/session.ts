@@ -2,10 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
-import type OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionContentPart } from "openai/resources/chat/completions";
 import { getCompactPrompt, getSystemPrompt, getTools } from "./prompt";
-import { ToolExecutor } from "./tools/executor";
+import { ToolExecutor, type CreateOpenAIClient } from "./tools/executor";
 
 const MAX_SESSION_ENTRIES = 50;
 
@@ -75,8 +74,6 @@ export type SkillInfo = {
   path: string;
 };
 
-type CreateOpenAIClient = () => { client: OpenAI | null; model: string; thinkingEnabled?: boolean };
-
 type SessionManagerOptions = {
   projectRoot: string;
   createOpenAIClient: CreateOpenAIClient;
@@ -96,7 +93,7 @@ export class SessionManager {
     this.projectRoot = options.projectRoot;
     this.createOpenAIClient = options.createOpenAIClient;
     this.onAssistantMessage = options.onAssistantMessage;
-    this.toolExecutor = new ToolExecutor(this.projectRoot);
+    this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient);
   }
 
   async listSkills(): Promise<SkillInfo[]> {
