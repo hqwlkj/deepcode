@@ -236,8 +236,11 @@ export class SessionManager {
     }
 
     const defaultSkillPrompt = `Use the skill document below to assist the user:\n<agent-drift-guard-skill>${AGENT_DRIFT_GUARD_SKILL}</agent-drift-guard-skill>`;
-    const skillMessage = this.buildSystemMessage(sessionId, defaultSkillPrompt);
-    this.appendSessionMessage(sessionId, skillMessage);
+    const defaultSkillMessage = this.buildSystemMessage(sessionId, defaultSkillPrompt);
+    this.appendSessionMessage(sessionId, defaultSkillMessage);
+
+    const userMessage = this.buildUserMessage(sessionId, userPrompt);
+    this.appendSessionMessage(sessionId, userMessage);
 
     if (userPrompt.skills && userPrompt.skills.length > 0) {
       for (const skill of userPrompt.skills) {
@@ -250,9 +253,6 @@ ${skillMd}
         this.appendSessionMessage(sessionId, skillMessage);
       }
     }
-
-    const userMessage = this.buildUserMessage(sessionId, userPrompt);
-    this.appendSessionMessage(sessionId, userMessage);
 
     this.activeSessionId = sessionId;
     await this.activateSession(sessionId);
@@ -273,6 +273,9 @@ ${skillMd}
       return;
     }
 
+    const userMessage = this.buildUserMessage(sessionId, userPrompt);
+    this.appendSessionMessage(sessionId, userMessage);
+
     if (userPrompt.skills && userPrompt.skills.length > 0) {
       for (const skill of userPrompt.skills) {
         const skillMd = fs.readFileSync(this.resolveSkillPath(skill.path), "utf8");
@@ -284,9 +287,6 @@ ${skillMd}
         this.appendSessionMessage(sessionId, skillMessage);
       }
     }
-
-    const userMessage = this.buildUserMessage(sessionId, userPrompt);
-    this.appendSessionMessage(sessionId, userMessage);
     this.activeSessionId = sessionId;
     await this.activateSession(sessionId);
   }
