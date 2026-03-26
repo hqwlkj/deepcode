@@ -147,6 +147,7 @@
       item.innerHTML = `
         <span class="skills-popup-item-name" title="${escapeHtml(skill.name)}">${escapeHtml(skill.name)}</span>
         <span class="skills-popup-item-path" title="${escapeHtml(skill.path)}">${escapeHtml(skill.path)}</span>
+        ${skill.isLoaded ? '<span class="skills-popup-item-loaded">✓</span>' : ''}
       `;
       item.addEventListener("click", () => {
         toggleSkill(skill);
@@ -411,6 +412,7 @@
   }
 
   function addBubble(content, role, meta, shouldConnectToPrev = false) {
+    
     const bubble = document.createElement("div");
     bubble.className = "bubble " + role;
 
@@ -472,6 +474,47 @@
         bubble.appendChild(dot);
         bubble.appendChild(contentDiv);
       }
+    } else if (role === "system") {
+      // system 类型气泡（可折叠，显示 Skills）
+      const header = document.createElement("div");
+      header.className = "bubble-collapsible-header";
+      const dotClass = shouldConnectToPrev ? "bubble-dot connect-to-prev" : "bubble-dot";
+      
+      // 从 meta.skill 中获取技能信息
+      const skillName = meta?.skill?.name || "Unknown Skill";
+      const skillDescription = meta?.skill?.description || "";
+
+      header.innerHTML = `
+        <span class="${dotClass}" style="background-color: var(--vscode-button-background);"></span>
+        <span class="bubble-title">
+          <span class="bubble-title-text"><b>Skills</b> <span class="tool-params">${escapeHtml(skillName)}</span></span>
+          <span class="bubble-toggle">
+            <svg viewBox="0 0 1024 1024" aria-hidden="true">
+              <path d="M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"></path>
+            </svg>
+          </span>
+        </span>
+      `;
+
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "bubble-collapsible-content collapsed";
+      contentDiv.textContent = skillDescription;
+
+      header.addEventListener("click", () => {
+        const isCollapsed = contentDiv.classList.toggle("collapsed");
+        const toggleBtn = header.querySelector(".bubble-toggle");
+        if (isCollapsed) {
+          toggleBtn.classList.remove("expanded");
+        } else {
+          toggleBtn.classList.add("expanded");
+        }
+        requestAnimationFrame(() => {
+          updateAllConnectionLines();
+        });
+      });
+
+      bubble.appendChild(header);
+      bubble.appendChild(contentDiv);
     } else if (role === "tool") {
       // 工具气泡（可折叠）
       let toolData = { ok: false, name: "unknown", output: "" };
@@ -1104,7 +1147,9 @@
   });
 
   function addMessageBubble(msg, shouldConnect) {
-    if (msg.role === "user") {
+    if (msg.role === "system") {
+      addBubble(msg.content, "system", msg.meta, false);
+    } else if (msg.role === "user") {
       addBubble(msg.content, "user", msg.meta, false);
     } else if (msg.role === "assistant") {
       addBubble(msg.html || msg.content, "assistant", msg.meta, shouldConnect);

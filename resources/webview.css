@@ -479,6 +479,12 @@ body {
   word-break: break-word;
 }
 
+.bubble.system {
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 16px;
+}
+
 .bubble.assistant {
   background: transparent;
   border-color: transparent;
@@ -878,6 +884,13 @@ textarea::placeholder {
 .skills-popup-item:hover .skills-popup-item-path,
 .skills-popup-item.selected .skills-popup-item-path {
   color: inherit;
+}
+
+.skills-popup-item-loaded {
+  color: var(--vscode-testing-icon-success);
+  font-weight: bold;
+  font-size: 14px;
+  margin-left: 4px;
 }
 
 /* Skills Bar (contains button and tags) */
