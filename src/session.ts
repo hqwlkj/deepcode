@@ -151,6 +151,7 @@ The candidate skills are as follows:\n\n`;
   async listSkills(sessionId?: string): Promise<SkillInfo[]> {
     const homeDir = os.homedir();
     const agentsRoot = path.join(homeDir, ".agents", "skills");
+    const projectSkillsRoot = path.join(this.projectRoot, ".deepcode", "skills");
     const skillsByName = new Map<string, SkillInfo>();
 
     const collectSkills = (root: string, displayRoot: string): SkillInfo[] => {
@@ -190,6 +191,9 @@ The candidate skills are as follows:\n\n`;
     for (const skill of collectSkills(agentsRoot, "~/.agents/skills")) {
       skillsByName.set(skill.name, skill);
     }
+    for (const skill of collectSkills(projectSkillsRoot, "./.deepcode/skills")) {
+      skillsByName.set(skill.name, skill);
+    }
 
     if (sessionId) {
       const loadedSkillKeys = this.getLoadedSkillKeys(sessionId);
@@ -212,6 +216,12 @@ The candidate skills are as follows:\n\n`;
     }
     if (skillPath.startsWith("~\\")) {
       return path.join(os.homedir(), skillPath.slice(2));
+    }
+    if (skillPath.startsWith("./")) {
+      return path.join(this.projectRoot, skillPath.slice(2));
+    }
+    if (skillPath.startsWith(".\\")) {
+      return path.join(this.projectRoot, skillPath.slice(2));
     }
     if (path.isAbsolute(skillPath)) {
       return skillPath;
@@ -406,7 +416,7 @@ The candidate skills are as follows:\n\n`;
         }
         const skillMd = fs.readFileSync(this.resolveSkillPath(skill.path), "utf8");
         const skillPrompt = `Use the skill document below to assist the user:\n
-<${skill.name}-skill path="${skill.path.replace("~", os.homedir())}">
+<${skill.name}-skill path="${this.resolveSkillPath(skill.path)}">
 ${skillMd}
 </${skill.name}-skill>`;
         const skillMessage = this.buildSkillMessage(sessionId, skillPrompt, skill);
@@ -457,7 +467,7 @@ ${skillMd}
         }
         const skillMd = fs.readFileSync(this.resolveSkillPath(skill.path), "utf8");
         const skillPrompt = `Use the skill document below to assist the user:\n
-<${skill.name}-skill path="${skill.path.replace("~", os.homedir())}">
+<${skill.name}-skill path="${this.resolveSkillPath(skill.path)}">
 ${skillMd}
 </${skill.name}-skill>`;
         const skillMessage = this.buildSkillMessage(sessionId, skillPrompt, skill);
