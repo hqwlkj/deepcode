@@ -395,11 +395,10 @@ The candidate skills are as follows:\n\n`;
     const systemMessage = this.buildSystemMessage(sessionId, systemPrompt);
     this.appendSessionMessage(sessionId, systemMessage);
 
-    const contextPath = path.join(this.projectRoot, ".deepcode", "context.md");
-    if (fs.existsSync(contextPath)) {
-      const contextMd = fs.readFileSync(contextPath, "utf8");
-      const contextMessage = this.buildSystemMessage(sessionId, contextMd);
-      this.appendSessionMessage(sessionId, contextMessage);
+    const agentInstructions = this.loadAgentInstructions();
+    if (agentInstructions) {
+      const instructionsMessage = this.buildSystemMessage(sessionId, agentInstructions);
+      this.appendSessionMessage(sessionId, instructionsMessage);
     }
 
     const defaultSkillPrompt = `Use the skill document below to assist the user:\n<agent-drift-guard-skill>${AGENT_DRIFT_GUARD_SKILL}</agent-drift-guard-skill>`;
@@ -902,6 +901,29 @@ ${skillMd}
       createTime: now,
       updateTime: now
     };
+  }
+
+  private loadAgentInstructions(): string | null {
+    const candidatePaths = [
+      path.join(this.projectRoot, ".deepcode", "AGENTS.md"),
+      path.join(os.homedir(), ".deepcode", "AGENTS.md")
+    ];
+
+    for (const candidatePath of candidatePaths) {
+      try {
+        if (!fs.existsSync(candidatePath)) {
+          continue;
+        }
+        const content = fs.readFileSync(candidatePath, "utf8").trim();
+        if (content) {
+          return content;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
   }
 
   private buildSystemMessage(sessionId: string, content: string): SessionMessage {
