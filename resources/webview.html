@@ -92,11 +92,11 @@
   const skillsPopup = document.getElementById("skillsPopup");
   const skillsPopupList = document.getElementById("skillsPopupList");
   const skillsTags = document.getElementById("skillsTags");
+
   const attachmentManager = typeof window.createPromptAttachmentManager === "function"
     ? window.createPromptAttachmentManager({
       promptInput,
       inputWrap,
-      dropZone: app,
       toolsLine,
       onAttachmentChange: () => {
         updateSendIconState();

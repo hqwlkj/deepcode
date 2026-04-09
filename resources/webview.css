@@ -702,42 +702,6 @@ body {
   outline: 1px solid var(--vscode-focusBorder);
 }
 
-.app.drag-over .input-wrap {
-  border-color: var(--vscode-button-background);
-  outline: 1px solid var(--vscode-button-background);
-  background: var(--vscode-list-dropBackground, var(--vscode-input-background));
-}
-
-.chat-attachment-drop-overlay {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  z-index: 2;
-  pointer-events: none;
-}
-
-.chat-attachment-drop-overlay.show {
-  display: flex;
-}
-
-.chat-attachment-drop-overlay-text {
-  padding: 12px 18px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #222;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-}
-
 .tools-line {
   display: none;
   align-items: center;
@@ -794,10 +758,9 @@ textarea::placeholder {
   gap: 6px;
   min-width: 0;
   max-width: 100%;
-  padding: 4px 8px 4px 4px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  padding: 4px;
+  border: 1px solid var(--vscode-editorWidget-background, var(--vscode-input-background));
+  border-radius: 6px;
   color: var(--vscode-foreground);
 }
 
@@ -807,7 +770,6 @@ textarea::placeholder {
 
 .chat-attached-context-attachment .monaco-button.codicon-close {
   display: inline-flex;
-  align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
@@ -829,8 +791,8 @@ textarea::placeholder {
 }
 
 .chat-attached-context-pill {
-  width: 16px;
-  height: 16px;
+  width: 13px;
+  height: 13px;
   border-radius: 4px;
   overflow: hidden;
   flex-shrink: 0;

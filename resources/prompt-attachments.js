@@ -23,42 +23,15 @@
     });
   }
 
-  function pickImageFileFromDataTransfer(dataTransfer) {
-    if (!dataTransfer) {
-      return null;
-    }
-
-    const files = Array.from(dataTransfer.files || []);
-    return files.find(isImageFile) || null;
-  }
-
-  function hasImageDataTransfer(dataTransfer) {
-    if (!dataTransfer) {
-      return false;
-    }
-
-    const items = Array.from(dataTransfer.items || []);
-    if (items.some((item) => item.kind === "file" && item.type.startsWith("image/"))) {
-      return true;
-    }
-
-    const files = Array.from(dataTransfer.files || []);
-    if (files.some(isImageFile)) {
-      return true;
-    }
-
-    const types = Array.from(dataTransfer.types || []);
-    return types.includes("Files");
-  }
-
   function pickImageFileFromClipboard(event) {
     const items = Array.from(event.clipboardData?.items || []);
     for (const item of items) {
-      if (item.kind === "file") {
-        const file = item.getAsFile();
-        if (isImageFile(file)) {
-          return file;
-        }
+      if (item.kind !== "file") {
+        continue;
+      }
+      const file = item.getAsFile();
+      if (isImageFile(file)) {
+        return file;
       }
     }
     return null;
@@ -68,45 +41,17 @@
     const promptInput = options?.promptInput;
     const inputWrap = options?.inputWrap;
     const toolsLine = options?.toolsLine;
-    const dropZone = options?.dropZone || inputWrap;
     const onAttachmentChange = typeof options?.onAttachmentChange === "function"
       ? options.onAttachmentChange
       : function () {};
 
-    if (!promptInput || !inputWrap || !toolsLine || !dropZone) {
-      throw new Error("Prompt attachment manager requires promptInput, inputWrap, toolsLine, and dropZone.");
+    if (!promptInput || !inputWrap || !toolsLine) {
+      throw new Error("Prompt attachment manager requires promptInput, inputWrap, and toolsLine.");
     }
 
     let attachment = null;
     let previewPopup = null;
     let previewImage = null;
-    let dragDepth = 0;
-    let dragOverlay = null;
-
-    function ensureDragOverlay() {
-      if (dragOverlay) {
-        return dragOverlay;
-      }
-
-      dragOverlay = createElement("div", "chat-attachment-drop-overlay");
-      const label = createElement("div", "chat-attachment-drop-overlay-text");
-      label.textContent = "将图片附件为上下文";
-      dragOverlay.appendChild(label);
-      dropZone.appendChild(dragOverlay);
-      return dragOverlay;
-    }
-
-    function showDragOverlay() {
-      ensureDragOverlay().classList.add("show");
-      dropZone.classList.add("drag-over");
-    }
-
-    function hideDragOverlay() {
-      if (dragOverlay) {
-        dragOverlay.classList.remove("show");
-      }
-      dropZone.classList.remove("drag-over");
-    }
 
     function ensurePreviewPopup() {
       if (previewPopup) {
@@ -173,11 +118,6 @@
         hasAttachments: Boolean(attachment),
         attachments: attachment ? [attachment] : []
       });
-    }
-
-    function clearDragState() {
-      dragDepth = 0;
-      hideDragOverlay();
     }
 
     function clear() {
@@ -258,21 +198,34 @@
       toolsLine.appendChild(createAttachmentNode());
     }
 
+    function setAttachmentData(data) {
+      if (!data?.dataUrl) {
+        return false;
+      }
+
+      attachment = {
+        name: data.name || ATTACHMENT_LABEL,
+        mimeType: data.mimeType || "image/png",
+        dataUrl: data.dataUrl,
+        label: ATTACHMENT_LABEL
+      };
+      render();
+      emitChange();
+      return true;
+    }
+
     async function setAttachmentFromFile(file) {
       if (!isImageFile(file)) {
         return false;
       }
 
       const dataUrl = await readFileAsDataUrl(file);
-      attachment = {
+      return setAttachmentData({
         name: file.name || ATTACHMENT_LABEL,
         mimeType: file.type || "image/png",
         dataUrl,
         label: ATTACHMENT_LABEL
-      };
-      render();
-      emitChange();
-      return true;
+      });
     }
 
     async function handlePaste(event) {
@@ -289,63 +242,7 @@
       }
     }
 
-    async function handleDrop(event) {
-      event.preventDefault();
-      clearDragState();
-      const file = pickImageFileFromDataTransfer(event.dataTransfer);
-      if (!file) {
-        return;
-      }
-
-      try {
-        await setAttachmentFromFile(file);
-      } catch (error) {
-        console.error("Failed to attach dropped image.", error);
-      }
-    }
-
     promptInput.addEventListener("paste", handlePaste);
-
-    function handleWindowDragEnter(event) {
-      if (!hasImageDataTransfer(event.dataTransfer)) {
-        return;
-      }
-      event.preventDefault();
-      dragDepth += 1;
-      showDragOverlay();
-    }
-
-    function handleWindowDragOver(event) {
-      if (!hasImageDataTransfer(event.dataTransfer)) {
-        return;
-      }
-      event.preventDefault();
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "copy";
-      }
-      showDragOverlay();
-    }
-
-    function handleWindowDragLeave(event) {
-      if (!hasImageDataTransfer(event.dataTransfer)) {
-        return;
-      }
-      dragDepth = Math.max(0, dragDepth - 1);
-      const leavingWindow = event.clientX <= 0
-        || event.clientY <= 0
-        || event.clientX >= window.innerWidth
-        || event.clientY >= window.innerHeight;
-      if (dragDepth === 0 || leavingWindow) {
-        hideDragOverlay();
-        dragDepth = 0;
-      }
-    }
-
-    window.addEventListener("dragenter", handleWindowDragEnter, true);
-    window.addEventListener("dragover", handleWindowDragOver, true);
-    window.addEventListener("dragleave", handleWindowDragLeave, true);
-    window.addEventListener("drop", handleDrop, true);
-    window.addEventListener("dragend", clearDragState, true);
 
     window.addEventListener("resize", () => {
       const attachmentNode = toolsLine.querySelector(".chat-attached-context-attachment");
