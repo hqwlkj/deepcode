@@ -41,6 +41,17 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
           message.html = this.md.render(message.content || reasoningContent || "");
         }
         this.webviewView.webview.postMessage({ type: "appendMessage", message, shouldConnect });
+      },
+      onSessionEntryUpdated: (entry) => {
+        if (!this.webviewView) {
+          return;
+        }
+        this.webviewView.webview.postMessage({
+          type: "sessionStatus",
+          sessionId: entry.id,
+          status: entry.status,
+          processes: this.serializeProcesses(entry.processes)
+        });
       }
     });
   }
@@ -147,6 +158,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       sessionId,
       summary: session.summary || "Untitled",
       status: session.status,
+      processes: this.serializeProcesses(session.processes),
       sessions: sessionsList,
       messages: messages
         .filter((m) => m.visible)
@@ -237,7 +249,8 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
         webview.postMessage({
           type: "sessionStatus",
           sessionId: activeSessionId,
-          status: activeSession.status
+          status: activeSession.status,
+          processes: this.serializeProcesses(activeSession.processes)
         });
       }
 
@@ -307,6 +320,20 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       return workspace.uri.fsPath;
     }
     return process.cwd();
+  }
+
+  private serializeProcesses(
+    processes: Map<string, { startTime: string; command: string }> | null
+  ): Record<string, { startTime: string; command: string }> | null {
+    if (!processes || processes.size === 0) {
+      return null;
+    }
+
+    const serialized: Record<string, { startTime: string; command: string }> = {};
+    for (const [pid, entry] of processes.entries()) {
+      serialized[pid] = entry;
+    }
+    return serialized;
   }
 
   private getWebviewHtml(webview: vscode.Webview): string {

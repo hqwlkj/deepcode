@@ -30,7 +30,7 @@ export async function handleBashTool(
   const startCwd = getSessionCwd(context.sessionId, context.projectRoot);
   const { shellPath, shellArgs, marker } = buildShellCommand(command);
 
-  const execution = await executeShellCommand(shellPath, shellArgs, startCwd, context);
+  const execution = await executeShellCommand(shellPath, shellArgs, startCwd, command, context);
   const result = buildToolCommandResult(
     execution.stdout,
     execution.stderr,
@@ -87,6 +87,7 @@ async function executeShellCommand(
   shellPath: string,
   shellArgs: string[],
   cwd: string,
+  command: string,
   context: ToolExecutionContext
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null; error?: string }> {
   return new Promise((resolve) => {
@@ -99,7 +100,7 @@ async function executeShellCommand(
     });
     const pid = child.pid;
     if (typeof pid === "number") {
-      context.onProcessStart?.(pid);
+      context.onProcessStart?.(pid, command);
     }
 
     let stdout = "";

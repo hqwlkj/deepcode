@@ -308,8 +308,8 @@ From `package.json`:
 ### Message Bubble Types
 
 - `role === "user"`: plain text user bubble
-- `role === "assistant"` and `meta.asThinking !== true`: standard assistant bubble with rendered Markdown HTML
-- `role === "assistant"` and `meta.asThinking === true`: collapsible `Thinking` bubble
+- `role === "assistant"` and `meta.asThinking !== true`: standard assistant bubble with rendered Markdown HTML. When this message is appended during active processing, the frontend marks the session as completed and hides the loading indicator.
+- `role === "assistant"` and `meta.asThinking === true`: collapsible intermediate bubble (used for thinking messages or status updates like context compaction). The loading indicator remains visible after appending this message.
 - `role === "system"` with `meta.skill`: collapsible skill bubble that shows the loaded skill name and description
 - `role === "tool"`: collapsible tool bubble with success or error state; `AskUserQuestion` tool output renders an interactive form when the session status is `waiting_for_user`
 

@@ -30,7 +30,7 @@ export type SessionEntry = {
   usage: unknown | null;
   createTime: string;
   updateTime: string;
-  processes: Map<string, string> | null;  // {pid: startTime}
+  processes: Map<string, { startTime: string; command: string }> | null;  // {pid: {startTime, command}}
 };
 
 export type SessionsIndex = {
@@ -83,12 +83,14 @@ type SessionManagerOptions = {
   createOpenAIClient: CreateOpenAIClient;
   renderMarkdown: (text: string) => string;
   onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
+  onSessionEntryUpdated?: (entry: SessionEntry) => void;
 };
 
 export class SessionManager {
   private readonly projectRoot: string;
   private readonly createOpenAIClient: CreateOpenAIClient;
   private readonly onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
+  private readonly onSessionEntryUpdated?: (entry: SessionEntry) => void;
   private activeSessionId: string | null = null;
   private readonly sessionControllers = new Map<string, AbortController>();
   private readonly toolExecutor: ToolExecutor;
@@ -97,6 +99,7 @@ export class SessionManager {
     this.projectRoot = options.projectRoot;
     this.createOpenAIClient = options.createOpenAIClient;
     this.onAssistantMessage = options.onAssistantMessage;
+    this.onSessionEntryUpdated = options.onSessionEntryUpdated;
     this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient);
   }
 
@@ -522,7 +525,7 @@ ${skillMd}
           return;
         }
 
-        if (((session.usage as { prompt_tokens: number })?.prompt_tokens || 0) > 64 * 1024) {
+        if (((session.usage as { prompt_tokens: number })?.prompt_tokens || 0) > 128 * 1024) {
           const message = this.buildAssistantMessage(sessionId, "The conversation is getting long, compacting...", null);
           message.meta = { asThinking: true };
           this.onAssistantMessage(message, false);
@@ -879,6 +882,7 @@ ${skillMd}
     const updated = updater({ ...index.entries[entryIndex] });
     index.entries[entryIndex] = updated;
     this.saveSessionsIndex(index);
+    this.onSessionEntryUpdated?.(updated);
     return updated;
   }
 
@@ -1026,7 +1030,7 @@ ${skillMd}
     toolCalls: unknown[]
   ): Promise<{ waitingForUser: boolean }> {
     const toolExecutions = await this.toolExecutor.executeToolCalls(sessionId, toolCalls, {
-      onProcessStart: (pid) => this.addSessionProcess(sessionId, pid),
+      onProcessStart: (pid, command) => this.addSessionProcess(sessionId, pid, command),
       onProcessExit: (pid) => this.removeSessionProcess(sessionId, pid)
     });
     if (this.isInterrupted(sessionId)) {
@@ -1200,11 +1204,11 @@ ${skillMd}
     launchNotifyScript(notifyCommand, Date.now() - startedAt, this.projectRoot);
   }
 
-  private addSessionProcess(sessionId: string, pid: number): void {
+  private addSessionProcess(sessionId: string, pid: number, command: string): void {
     const now = new Date().toISOString();
     this.updateSessionEntry(sessionId, (entry) => {
       const processes = new Map(entry.processes ?? []);
-      processes.set(String(pid), now);
+      processes.set(String(pid), { startTime: now, command });
       return {
         ...entry,
         processes,
@@ -1226,7 +1230,7 @@ ${skillMd}
     });
   }
 
-  private getProcessIds(processes: Map<string, string> | null): number[] {
+  private getProcessIds(processes: Map<string, { startTime: string; command: string }> | null): number[] {
     if (!processes) {
       return [];
     }
@@ -1373,28 +1377,35 @@ ${skillMd}
     return "pending";
   }
 
-  private deserializeProcesses(value: unknown): Map<string, string> | null {
+  private deserializeProcesses(value: unknown): Map<string, { startTime: string; command: string }> | null {
     if (!value || typeof value !== "object") {
       return null;
     }
-    const processes = new Map<string, string>();
-    for (const [pid, startTime] of Object.entries(value as Record<string, unknown>)) {
+    const processes = new Map<string, { startTime: string; command: string }>();
+    for (const [pid, entry] of Object.entries(value as Record<string, unknown>)) {
       if (!pid) {
         continue;
       }
-      const valueString = typeof startTime === "string" ? startTime : new Date().toISOString();
-      processes.set(pid, valueString);
+      if (typeof entry === "string") {
+        // Backward compatibility for old format where just stored start time
+        processes.set(pid, { startTime: entry, command: "Running process..." });
+      } else if (typeof entry === "object" && entry !== null) {
+        const obj = entry as { startTime?: unknown; command?: unknown };
+        const startTime = typeof obj.startTime === "string" ? obj.startTime : new Date().toISOString();
+        const command = typeof obj.command === "string" ? obj.command : "Running process...";
+        processes.set(pid, { startTime, command });
+      }
     }
     return processes.size > 0 ? processes : null;
   }
 
-  private serializeProcesses(processes: Map<string, string> | null): Record<string, string> | null {
+  private serializeProcesses(processes: Map<string, { startTime: string; command: string }> | null): Record<string, { startTime: string; command: string }> | null {
     if (!processes || processes.size === 0) {
       return null;
     }
-    const serialized: Record<string, string> = {};
-    for (const [pid, startTime] of processes.entries()) {
-      serialized[pid] = startTime;
+    const serialized: Record<string, { startTime: string; command: string }> = {};
+    for (const [pid, entry] of processes.entries()) {
+      serialized[pid] = entry;
     }
     return serialized;
   }

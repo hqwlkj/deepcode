@@ -26,12 +26,12 @@ export type ToolExecutionContext = {
   projectRoot: string;
   toolCall: ToolCall;
   createOpenAIClient?: CreateOpenAIClient;
-  onProcessStart?: (pid: number) => void;
+  onProcessStart?: (pid: number, command: string) => void;
   onProcessExit?: (pid: number) => void;
 };
 
 export type ToolExecutionHooks = {
-  onProcessStart?: (pid: number) => void;
+  onProcessStart?: (pid: number, command: string) => void;
   onProcessExit?: (pid: number) => void;
 };
 

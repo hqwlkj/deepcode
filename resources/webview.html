@@ -121,6 +121,8 @@
   let currentThinkingBubble = null; // 记录当前展开的思考气泡
   let availableSkills = []; // 可用的技能列表
   let selectedSkills = []; // 已选择的技能
+  let currentRunningProcesses = null; // 当前正在运行的进程: Record<string, { startTime: string; command: string }> | null
+  let loadingUpdateTimer = null; // 定时更新loading文本的计时器
 
   function isBusyStatus(status) {
     return status === "processing" || status === "pending";
@@ -782,11 +784,53 @@
     });
   }
 
+  function formatElapsedTime(startTimeIso) {
+    const startTime = new Date(startTimeIso).getTime();
+    const elapsedMs = Date.now() - startTime;
+    const elapsedSeconds = Math.floor(elapsedMs / 1000);
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = elapsedSeconds % 60;
+    if (minutes > 0) {
+      return `${minutes}m${seconds}s`;
+    }
+    return `${seconds}s`;
+  }
+
+  function updateLoadingText() {
+    const loadingSpan = loading.querySelector('span');
+    if (!loadingSpan) {
+      return;
+    }
+    if (!currentRunningProcesses || Object.keys(currentRunningProcesses).length === 0) {
+      loadingSpan.textContent = 'Thinking...';
+      return;
+    }
+    // 显示第一个运行中的进程（通常只有一个进程在运行）
+    const firstPid = Object.keys(currentRunningProcesses)[0];
+    const process = currentRunningProcesses[firstPid];
+    const elapsed = formatElapsedTime(process.startTime);
+    loadingSpan.textContent = `(${elapsed}) ${process.command}`;
+  }
+
   function setLoading(isLoading, status) {
     loading.classList.toggle("active", isLoading);
     if (status !== undefined) {
       currentSessionStatus = status;
     }
+
+    // 清除旧的计时器
+    if (loadingUpdateTimer !== null) {
+      clearInterval(loadingUpdateTimer);
+      loadingUpdateTimer = null;
+    }
+
+    // 如果正在加载且有运行中的进程，每秒更新一次文本
+    if (isLoading && currentRunningProcesses && Object.keys(currentRunningProcesses).length > 0) {
+      loadingUpdateTimer = setInterval(updateLoadingText, 1000);
+    }
+
+    // 更新初始文本
+    updateLoadingText();
 
     // 切换图标
     if (isLoading) {
@@ -1255,6 +1299,11 @@
       // 加载已有对话
       currentSessionId = message.sessionId;
       currentSessionStatus = message.status || null;
+      if ('processes' in message) {
+        currentRunningProcesses = message.processes;
+      } else {
+        currentRunningProcesses = null;
+      }
       attachmentManager?.clear();
       clearMessages();
       if (sessionSelectorTitleText) {
@@ -1322,6 +1371,9 @@
         return;
       }
       const nextStatus = message.status || null;
+      if ('processes' in message) {
+        currentRunningProcesses = message.processes;
+      }
       setLoading(isBusyStatus(nextStatus), nextStatus);
     } else if (message.type === "userMessage") {
       // 显示用户消息（纯文本）
