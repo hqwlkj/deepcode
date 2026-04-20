@@ -81,6 +81,7 @@ export type SkillInfo = {
 type SessionManagerOptions = {
   projectRoot: string;
   createOpenAIClient: CreateOpenAIClient;
+  getResolvedSettings: () => { webSearchTool?: string };
   renderMarkdown: (text: string) => string;
   onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
   onSessionEntryUpdated?: (entry: SessionEntry) => void;
@@ -89,6 +90,7 @@ type SessionManagerOptions = {
 export class SessionManager {
   private readonly projectRoot: string;
   private readonly createOpenAIClient: CreateOpenAIClient;
+  private readonly getResolvedSettings: () => { webSearchTool?: string };
   private readonly onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => void;
   private readonly onSessionEntryUpdated?: (entry: SessionEntry) => void;
   private activeSessionId: string | null = null;
@@ -98,6 +100,7 @@ export class SessionManager {
   constructor(options: SessionManagerOptions) {
     this.projectRoot = options.projectRoot;
     this.createOpenAIClient = options.createOpenAIClient;
+    this.getResolvedSettings = options.getResolvedSettings;
     this.onAssistantMessage = options.onAssistantMessage;
     this.onSessionEntryUpdated = options.onSessionEntryUpdated;
     this.toolExecutor = new ToolExecutor(this.projectRoot, this.createOpenAIClient);
@@ -395,7 +398,7 @@ The candidate skills are as follows:\n\n`;
     this.saveSessionsIndex(index);
     this.removeSessionMessages(droppedEntries.map((item) => item.id));
 
-    const systemPrompt = getSystemPrompt(this.projectRoot);
+    const systemPrompt = getSystemPrompt(this.projectRoot, this.getPromptToolOptions());
     const systemMessage = this.buildSystemMessage(sessionId, systemPrompt);
     this.appendSessionMessage(sessionId, systemMessage);
 
@@ -537,7 +540,7 @@ ${skillMd}
             {
               model,
               messages,
-              tools: getTools(),
+              tools: getTools(this.getPromptToolOptions()),
               // @ts-ignore
               thinking: thinkingEnabled ? { type: "enabled" } : undefined
             },
@@ -693,6 +696,12 @@ ${skillMd}
     };
     sessionMessages.splice(endIndex, 0, summaryMessage);
     this.saveSessionMessages(sessionId, sessionMessages);
+  }
+
+  private getPromptToolOptions(): { webSearchEnabled: boolean } {
+    return {
+      webSearchEnabled: Boolean(this.getResolvedSettings().webSearchTool)
+    };
   }
 
   interruptSession(sessionId: string): void {

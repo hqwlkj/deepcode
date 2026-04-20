@@ -3,6 +3,7 @@ import { handleAskUserQuestionTool } from "./ask-user-question-handler";
 import { handleBashTool } from "./bash-handler";
 import { handleEditTool } from "./edit-handler";
 import { handleReadTool } from "./read-handler";
+import { handleWebSearchTool } from "./web-search-handler";
 import { handleWriteTool } from "./write-handler";
 
 export type CreateOpenAIClient = () => {
@@ -10,6 +11,7 @@ export type CreateOpenAIClient = () => {
   model: string;
   thinkingEnabled: boolean;
   notify?: string;
+  webSearchTool?: string;
 };
 
 export type ToolCall = {
@@ -93,6 +95,7 @@ export class ToolExecutor {
     this.toolHandlers.set("write", handleWriteTool);
     this.toolHandlers.set("edit", handleEditTool);
     this.toolHandlers.set("AskUserQuestion", handleAskUserQuestionTool);
+    this.toolHandlers.set("WebSearch", handleWebSearchTool);
   }
 
   private parseToolCall(toolCall: unknown): ToolCall | null {

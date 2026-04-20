@@ -28,6 +28,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     this.sessionManager = new SessionManager({
       projectRoot: this.getWorkspaceRoot(),
       createOpenAIClient: () => this.createOpenAIClient(),
+      getResolvedSettings: () => this.resolveCurrentSettings(),
       renderMarkdown: (text) => this.md.render(text),
       onAssistantMessage: (message: SessionMessage, shouldConnect: boolean) => {
         if (!this.webviewView) {
@@ -278,16 +279,19 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private createOpenAIClient(): { client: OpenAI | null; model: string; thinkingEnabled: boolean; notify?: string } {
-    const settings = resolveSettings(this.readSettings(), {
-      model: DEFAULT_MODEL,
-      baseURL: DEFAULT_BASE_URL
-    });
+  private createOpenAIClient(): {
+    client: OpenAI | null;
+    model: string;
+    thinkingEnabled: boolean;
+    notify?: string;
+    webSearchTool?: string;
+  } {
+    const settings = this.resolveCurrentSettings();
 
-    const { apiKey, baseURL, model, thinkingEnabled, notify } = settings;
+    const { apiKey, baseURL, model, thinkingEnabled, notify, webSearchTool } = settings;
 
     if (!apiKey) {
-      return { client: null, model, thinkingEnabled, notify };
+      return { client: null, model, thinkingEnabled, notify, webSearchTool };
     }
 
     const client = new OpenAI({
@@ -295,7 +299,14 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       baseURL: baseURL || undefined
     });
 
-    return { client, model, thinkingEnabled, notify };
+    return { client, model, thinkingEnabled, notify, webSearchTool };
+  }
+
+  private resolveCurrentSettings() {
+    return resolveSettings(this.readSettings(), {
+      model: DEFAULT_MODEL,
+      baseURL: DEFAULT_BASE_URL
+    });
   }
 
   private readSettings(): DeepcodingSettings | null {

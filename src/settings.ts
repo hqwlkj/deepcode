@@ -9,6 +9,7 @@ export type DeepcodingSettings = {
   env?: DeepcodingEnv;
   thinkingEnabled?: boolean;
   notify?: string;
+  webSearchTool?: string;
 };
 
 export type ResolvedDeepcodingSettings = {
@@ -17,6 +18,7 @@ export type ResolvedDeepcodingSettings = {
   model: string;
   thinkingEnabled: boolean;
   notify?: string;
+  webSearchTool?: string;
 };
 
 export function resolveSettings(
@@ -25,6 +27,8 @@ export function resolveSettings(
 ): ResolvedDeepcodingSettings {
   const env = settings?.env ?? {};
   const notify = typeof settings?.notify === "string" ? settings.notify.trim() : "";
+  const webSearchTool =
+    typeof settings?.webSearchTool === "string" ? settings.webSearchTool.trim() : "";
 
   return {
     apiKey: env.API_KEY?.trim(),
@@ -34,6 +38,7 @@ export function resolveSettings(
       typeof settings?.thinkingEnabled === "boolean"
         ? settings.thinkingEnabled
         : String(env.THINKING ?? "").toLowerCase() === "enabled",
-    notify: notify || undefined
+    notify: notify || undefined,
+    webSearchTool: webSearchTool || undefined
   };
 }

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { buildNotifyEnv, formatDurationSeconds, launchNotifyScript, type NotifySpawn } from "../notify";
 import { resolveSettings } from "../settings";
 
-test("resolveSettings reads top-level thinkingEnabled and notify", () => {
+test("resolveSettings reads top-level thinkingEnabled, notify, and webSearchTool", () => {
   const resolved = resolveSettings(
     {
       env: {
@@ -12,7 +12,8 @@ test("resolveSettings reads top-level thinkingEnabled and notify", () => {
         API_KEY: "sk-test"
       },
       thinkingEnabled: true,
-      notify: "  /tmp/notify.sh  "
+      notify: "  /tmp/notify.sh  ",
+      webSearchTool: "  /tmp/web-search.sh  "
     },
     {
       model: "default-model",
@@ -25,6 +26,7 @@ test("resolveSettings reads top-level thinkingEnabled and notify", () => {
   assert.equal(resolved.apiKey, "sk-test");
   assert.equal(resolved.thinkingEnabled, true);
   assert.equal(resolved.notify, "/tmp/notify.sh");
+  assert.equal(resolved.webSearchTool, "/tmp/web-search.sh");
 });
 
 test("resolveSettings still accepts legacy env.THINKING when thinkingEnabled is absent", () => {

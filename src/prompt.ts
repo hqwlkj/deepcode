@@ -245,7 +245,11 @@ const SYSTEM_PROMPT_BASE = `You are an interactive CLI tool that helps users wit
 
 IMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming. You may use URLs provided by the user in their messages or local files.`;
 
-function readToolDocs(extensionRoot: string): string {
+type PromptToolOptions = {
+  webSearchEnabled?: boolean;
+};
+
+function readToolDocs(extensionRoot: string, options: PromptToolOptions = {}): string {
   const toolsDir = path.join(extensionRoot, "docs", "tools");
   if (!fs.existsSync(toolsDir)) {
     return "";
@@ -254,6 +258,7 @@ function readToolDocs(extensionRoot: string): string {
   const entries = fs.readdirSync(toolsDir);
   const docs = entries
     .filter((entry) => entry.endsWith(".md"))
+    .filter((entry) => options.webSearchEnabled || entry !== "web-search.md")
     .sort()
     .map((entry) => {
       const fullPath = path.join(toolsDir, entry);
@@ -268,8 +273,8 @@ function readToolDocs(extensionRoot: string): string {
   return docs.join("\n\n");
 }
 
-export function getSystemPrompt(projectRoot: string): string {
-  const toolDocs = readToolDocs(getExtensionRoot());
+export function getSystemPrompt(projectRoot: string, options: PromptToolOptions = {}): string {
+  const toolDocs = readToolDocs(getExtensionRoot(), options);
   const basePrompt = toolDocs
     ? `${SYSTEM_PROMPT_BASE}\n\n# Available Tools\n\n${toolDocs}`
     : SYSTEM_PROMPT_BASE;
@@ -345,8 +350,8 @@ export type ToolDefinition = {
   };
 };
 
-export function getTools(): ToolDefinition[] {
-  return [
+export function getTools(options: PromptToolOptions = {}): ToolDefinition[] {
+  const tools: ToolDefinition[] = [
     {
       type: "function",
       function: {
@@ -522,4 +527,27 @@ export function getTools(): ToolDefinition[] {
       },
     },
   ];
+
+  if (options.webSearchEnabled) {
+    tools.push({
+      type: "function",
+      function: {
+        name: "WebSearch",
+        description: "Run a configured web search script and return its standard output.",
+        parameters: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "The search query to pass as a single argument to the configured script.",
+            },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+    });
+  }
+
+  return tools;
 }
