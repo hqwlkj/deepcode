@@ -1,85 +1,178 @@
 import * as fs from "fs";
 import * as path from "path";
+import { z } from "zod";
 import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
-import { wasFileRead } from "./state";
+import {
+  buildDiffPreview,
+  ensureParentDirectory,
+  hasFileChangedSinceState,
+  normalizeContent,
+  readTextFileWithMetadata,
+  writeTextFile
+} from "./file-utils";
+import { executeValidatedTool } from "./runtime";
+import { getFileState, isFullFileView, normalizeFilePath, recordFileState } from "./state";
+
+const writeSchema = z.strictObject({
+  file_path: z.string().min(1, "file_path is required."),
+  content: z.string({
+    invalid_type_error:
+      "content must be a string. If you are writing JSON, serialize the full document to text before calling write."
+  })
+});
+
+type WriteInput = z.infer<typeof writeSchema>;
+
+type WriteRepairMetadata = {
+  input_repaired: boolean;
+  repair_kind: "json-stringify-content";
+} | null;
 
 export async function handleWriteTool(
   args: Record<string, unknown>,
   context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
-  const filePath = typeof args.file_path === "string" ? args.file_path : "";
-  if (!filePath.trim()) {
-    return {
-      ok: false,
-      name: "write",
-      error: "Missing required \"file_path\" string."
-    };
-  }
+  let repairMetadata: WriteRepairMetadata = null;
 
-  if (!path.isAbsolute(filePath)) {
-    return {
-      ok: false,
-      name: "write",
-      error: "file_path must be an absolute path."
-    };
-  }
+  return executeValidatedTool(
+    "write",
+    writeSchema,
+    args,
+    context,
+    async (input) => {
+      const filePath = normalizeFilePath(input.file_path);
+      if (!path.isAbsolute(filePath)) {
+        return {
+          ok: false,
+          name: "write",
+          error: "file_path must be an absolute path."
+        };
+      }
 
-  const content = typeof args.content === "string" ? args.content : null;
-  if (content === null) {
-    return {
-      ok: false,
-      name: "write",
-      error: "Missing required \"content\" string."
-    };
-  }
+      const existingFile = fs.existsSync(filePath);
+      if (existingFile) {
+        let stat: fs.Stats;
+        try {
+          stat = fs.statSync(filePath);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            ok: false,
+            name: "write",
+            error: `Failed to stat file: ${message}`
+          };
+        }
 
-  if (fs.existsSync(filePath)) {
-    let stat: fs.Stats;
-    try {
-      stat = fs.statSync(filePath);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        ok: false,
-        name: "write",
-        error: `Failed to stat file: ${message}`
-      };
+        if (stat.isDirectory()) {
+          return {
+            ok: false,
+            name: "write",
+            error: "file_path points to a directory."
+          };
+        }
+
+        const fileState = getFileState(context.sessionId, filePath);
+        if (!fileState || !isFullFileView(fileState)) {
+          return {
+            ok: false,
+            name: "write",
+            error: "Must read the full existing file before writing."
+          };
+        }
+
+        if (hasFileChangedSinceState(filePath, fileState)) {
+          return {
+            ok: false,
+            name: "write",
+            error: "File has been modified since read. Read it again before writing."
+          };
+        }
+      }
+
+      const normalizedContent = normalizeContent(input.content);
+
+      try {
+        ensureParentDirectory(filePath);
+
+        const existingMetadata = existingFile ? readTextFileWithMetadata(filePath) : null;
+        const encoding = existingMetadata?.encoding ?? "utf8";
+        const lineEndings =
+          existingMetadata?.lineEndings ??
+          (input.content.includes("\r\n") ? "CRLF" : "LF");
+        const diffPreview = buildDiffPreview(
+          filePath,
+          existingMetadata?.content ?? null,
+          normalizedContent
+        );
+        const bytes = writeTextFile(filePath, normalizedContent, encoding, lineEndings);
+        const freshMetadata = readTextFileWithMetadata(filePath);
+
+        recordFileState(context.sessionId, {
+          filePath,
+          content: freshMetadata.content,
+          timestamp: freshMetadata.timestamp,
+          encoding: freshMetadata.encoding,
+          lineEndings: freshMetadata.lineEndings
+        });
+
+        return {
+          ok: true,
+          name: "write",
+          output: existingMetadata ? "Updated file." : "Created file.",
+          metadata: {
+            type: existingMetadata ? "update" : "create",
+            file_path: filePath,
+            bytes,
+            encoding: freshMetadata.encoding,
+            line_endings: freshMetadata.lineEndings,
+            cache_refreshed: true,
+            diff_preview: diffPreview,
+            ...repairMetadata
+          }
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          ok: false,
+          name: "write",
+          error: message
+        };
+      }
+    },
+    {
+      preprocess: (rawInput) => {
+        const filePath =
+          typeof rawInput.file_path === "string" ? normalizeFilePath(rawInput.file_path) : "";
+        const content = rawInput.content;
+        if (
+          filePath.toLowerCase().endsWith(".json") &&
+          content !== null &&
+          typeof content === "object" &&
+          !Buffer.isBuffer(content)
+        ) {
+          repairMetadata = {
+            input_repaired: true,
+            repair_kind: "json-stringify-content"
+          };
+
+          return {
+            ok: true,
+            input: {
+              ...rawInput,
+              file_path: filePath,
+              content: JSON.stringify(content, null, 2)
+            }
+          };
+        }
+
+        repairMetadata = null;
+        return {
+          ok: true,
+          input: typeof rawInput.file_path === "string"
+            ? { ...rawInput, file_path: filePath }
+            : rawInput
+        };
+      }
     }
-
-    if (stat.isDirectory()) {
-      return {
-        ok: false,
-        name: "write",
-        error: "file_path points to a directory."
-      };
-    }
-
-    if (!wasFileRead(context.sessionId, filePath)) {
-      return {
-        ok: false,
-        name: "write",
-        error: "Must read existing file before writing."
-      };
-    }
-  }
-
-  const normalizedContent = content.length > 0 && !content.endsWith("\n")
-    ? `${content}\n`
-    : content;
-
-  try {
-    fs.writeFileSync(filePath, normalizedContent, "utf8");
-    return {
-      ok: true,
-      name: "write",
-      output: `Wrote ${Buffer.byteLength(normalizedContent, "utf8")} bytes to ${filePath}.`
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      name: "write",
-      error: message
-    };
-  }
+  );
 }

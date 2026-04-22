@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import ignore from "ignore";
 import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
+import { readTextFileWithMetadata } from "./file-utils";
 import { createSnippet, markFileRead } from "./state";
 
 const DEFAULT_LINE_LIMIT = 2000;
@@ -41,9 +42,15 @@ type PageRange = {
 };
 
 type TextReadResult = {
+  content: string;
   output: string;
   startLine: number;
   endLine: number;
+  totalLines: number;
+  isPartialView: boolean;
+  encoding: BufferEncoding;
+  lineEndings: "LF" | "CRLF";
+  timestamp: number;
 };
 
 export async function handleReadTool(
@@ -137,7 +144,11 @@ export async function handleReadTool(
   try {
     if (ext === ".ipynb") {
       const output = readNotebook(filePath);
-      markFileRead(context.sessionId, filePath);
+      markFileRead(context.sessionId, filePath, {
+        content: "",
+        timestamp: Math.floor(stat.mtimeMs),
+        isPartialView: true
+      });
       return {
         ok: true,
         name: "read",
@@ -176,7 +187,11 @@ export async function handleReadTool(
       }
 
       const base64 = buffer.toString("base64");
-      markFileRead(context.sessionId, filePath);
+      markFileRead(context.sessionId, filePath, {
+        content: "",
+        timestamp: Math.floor(stat.mtimeMs),
+        isPartialView: true
+      });
       return {
         ok: true,
         name: "read",
@@ -195,7 +210,11 @@ export async function handleReadTool(
       const buffer = fs.readFileSync(filePath);
       const mime = getImageMimeType(ext);
       const base64 = buffer.toString("base64");
-      markFileRead(context.sessionId, filePath);
+      markFileRead(context.sessionId, filePath, {
+        content: "",
+        timestamp: Math.floor(stat.mtimeMs),
+        isPartialView: true
+      });
       return {
         ok: true,
         name: "read",
@@ -226,7 +245,18 @@ export async function handleReadTool(
     }
 
     const textResult = readTextFile(filePath, offset.value, limit.value);
-    markFileRead(context.sessionId, filePath);
+    markFileRead(context.sessionId, filePath, {
+      content: textResult.content,
+      timestamp: textResult.timestamp,
+      offset: textResult.isPartialView ? textResult.startLine : undefined,
+      limit:
+        textResult.isPartialView
+          ? Math.max(1, textResult.endLine - textResult.startLine + 1)
+          : undefined,
+      isPartialView: textResult.isPartialView,
+      encoding: textResult.encoding,
+      lineEndings: textResult.lineEndings
+    });
     const snippet = createSnippet(
       context.sessionId,
       filePath,
@@ -383,21 +413,34 @@ function parseLineLimit(
 }
 
 function readTextFile(filePath: string, offset: number | null, limit: number): TextReadResult {
-  const raw = fs.readFileSync(filePath, "utf8");
+  const metadata = readTextFileWithMetadata(filePath);
+  const raw = metadata.content;
   if (!raw) {
     return {
+      content: "",
       output: "WARNING: File is empty.",
       startLine: offset ?? 1,
-      endLine: offset ?? 1
+      endLine: offset ?? 1,
+      totalLines: 0,
+      isPartialView: false,
+      encoding: metadata.encoding,
+      lineEndings: metadata.lineEndings,
+      timestamp: metadata.timestamp
     };
   }
 
-  const lines = raw.split(/\r?\n/);
+  const lines = raw.split("\n");
   if (lines.length === 1 && lines[0] === "") {
     return {
+      content: "",
       output: "WARNING: File is empty.",
       startLine: offset ?? 1,
-      endLine: offset ?? 1
+      endLine: offset ?? 1,
+      totalLines: 0,
+      isPartialView: false,
+      encoding: metadata.encoding,
+      lineEndings: metadata.lineEndings,
+      timestamp: metadata.timestamp
     };
   }
 
@@ -406,10 +449,17 @@ function readTextFile(filePath: string, offset: number | null, limit: number): T
   const selected = lines.slice(startIndex, endIndex);
   const startLine = startIndex + 1;
   const endLine = selected.length > 0 ? startIndex + selected.length : startLine;
+  const isPartialView = startLine !== 1 || endLine < lines.length;
   return {
+    content: selected.join("\n"),
     output: formatWithLineNumbers(selected, startLine),
     startLine,
-    endLine
+    endLine,
+    totalLines: lines.length,
+    isPartialView,
+    encoding: metadata.encoding,
+    lineEndings: metadata.lineEndings,
+    timestamp: metadata.timestamp
   };
 }
 

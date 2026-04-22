@@ -467,7 +467,8 @@ export function getTools(options: PromptToolOptions = {}): ToolDefinition[] {
       type: "function",
       function: {
         name: "write",
-        description: "Write or overwrite files.",
+        description:
+          "Create files or overwrite them with a complete string payload. Prefer edit for existing files.",
         parameters: {
           type: "object",
           properties: {
@@ -477,7 +478,7 @@ export function getTools(options: PromptToolOptions = {}): ToolDefinition[] {
             },
             content: {
               type: "string",
-              description: "Complete file content",
+              description: "Complete file content as a single string. Serialize JSON documents before writing.",
             },
           },
           required: ["file_path", "content"],
@@ -499,7 +500,7 @@ export function getTools(options: PromptToolOptions = {}): ToolDefinition[] {
             },
             snippet_id: {
               type: "string",
-              description: "Snippet id returned by the Read or Edit tool to scope the search range.",
+              description: "Snippet id returned by the Read or Edit tool to scope the search range after a partial read.",
             },
             old_string: {
               type: "string",
@@ -533,13 +534,13 @@ export function getTools(options: PromptToolOptions = {}): ToolDefinition[] {
       type: "function",
       function: {
         name: "WebSearch",
-        description: "Run a configured web search script and return its standard output.",
+        description: "Perform web searching using a natural language query.",
         parameters: {
           type: "object",
           properties: {
             query: {
               type: "string",
-              description: "The search query to pass as a single argument to the configured script.",
+              description: "A search query phrased as a clear, specific natural language question or statement that includes key context.",
             },
           },
           required: ["query"],

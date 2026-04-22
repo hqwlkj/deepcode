@@ -188,12 +188,17 @@ export class ToolExecutor {
     try {
       const parsed = JSON.parse(rawArguments);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        return { ok: false, error: "Tool arguments must be a JSON object." };
+        return { ok: false, error: "InputParseError: Tool arguments must be a JSON object." };
       }
       return { ok: true, args: parsed as Record<string, unknown> };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return { ok: false, error: `Failed to parse tool arguments: ${message}` };
+      return {
+        ok: false,
+        error:
+          `InputParseError: Failed to parse tool arguments: ${message}. ` +
+          "Ensure the tool call arguments are valid JSON. Prefer Edit over Write for large existing-file changes."
+      };
     }
   }
 

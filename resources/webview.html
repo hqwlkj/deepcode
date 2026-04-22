@@ -72,6 +72,7 @@
 <script nonce="{{nonce}}" src="{{attachmentsJsUri}}"></script>
 <script nonce="{{nonce}}">
   const vscode = acquireVsCodeApi();
+  const workspaceRoot = {{workspaceRoot}};
   const app = document.querySelector(".app");
   const messages = document.getElementById("messages");
   const inputWrap = document.querySelector(".input-wrap");
@@ -626,18 +627,21 @@
       if (isAskUserQuestion) {
         renderAskUserQuestionContent(toolData, contentDiv);
       } else {
-        // 优先显示resultMd，其次是output，最后是完整content
-        let displayContent = resultMd;
-        if (!displayContent && toolData.output) {
-          displayContent = typeof toolData.output === 'string'
-            ? toolData.output
-            : JSON.stringify(toolData.output, null, 2);
-        }
-        if (!displayContent) {
-          displayContent = content;
-        }
+        const rendered = renderStructuredToolResult(toolData, contentDiv);
+        if (!rendered) {
+          // 优先显示resultMd，其次是output，最后是完整content
+          let displayContent = resultMd;
+          if (!displayContent && toolData.output) {
+            displayContent = typeof toolData.output === 'string'
+              ? toolData.output
+              : JSON.stringify(toolData.output, null, 2);
+          }
+          if (!displayContent) {
+            displayContent = content;
+          }
 
-        contentDiv.textContent = displayContent;
+          contentDiv.textContent = displayContent;
+        }
       }
 
       header.addEventListener("click", () => {
@@ -715,6 +719,161 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function renderStructuredToolResult(toolData, container) {
+    if (!toolData || toolData.ok !== true) {
+      return false;
+    }
+
+    const toolName = String(toolData.name || "").toLowerCase();
+    if (toolName !== "edit" && toolName !== "write") {
+      return false;
+    }
+
+    const metadata = toolData.metadata && typeof toolData.metadata === "object"
+      ? toolData.metadata
+      : null;
+    if (!metadata || typeof metadata.file_path !== "string") {
+      return false;
+    }
+
+    const details = document.createElement("div");
+    details.className = "tool-result-details";
+
+    if (typeof toolData.output === "string" && toolData.output.trim()) {
+      const summary = document.createElement("div");
+      summary.className = "tool-result-summary";
+      summary.textContent = toolData.output.trim();
+      details.appendChild(summary);
+    }
+
+    const fileRow = document.createElement("div");
+    fileRow.className = "tool-result-file-row";
+
+    const fileLabel = document.createElement("span");
+    fileLabel.className = "tool-result-label";
+    fileLabel.textContent = "File";
+    fileRow.appendChild(fileLabel);
+
+    const fileButton = document.createElement("button");
+    fileButton.type = "button";
+    fileButton.className = "tool-result-filepath";
+    fileButton.textContent = formatDisplayPath(metadata.file_path);
+    fileButton.title = metadata.file_path;
+    fileButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const targetLine = metadata.scope && typeof metadata.scope.start_line === "number"
+        ? metadata.scope.start_line
+        : 1;
+      vscode.postMessage({
+        type: "openFile",
+        filePath: metadata.file_path,
+        line: targetLine
+      });
+    });
+    fileRow.appendChild(fileButton);
+    details.appendChild(fileRow);
+
+    if (typeof metadata.diff_preview === "string" && metadata.diff_preview.trim()) {
+      const diffBlock = renderDiffPreview(metadata.diff_preview);
+      if (diffBlock) {
+        details.appendChild(diffBlock);
+      }
+    }
+
+    container.appendChild(details);
+    return true;
+  }
+
+  function formatDisplayPath(filePath) {
+    if (!filePath) {
+      return "";
+    }
+
+    if (workspaceRoot && isPathInsideWorkspace(filePath, workspaceRoot)) {
+      const relative = getRelativePath(filePath, workspaceRoot);
+      if (relative) {
+        return relative;
+      }
+    }
+
+    return filePath;
+  }
+
+  function isPathInsideWorkspace(filePath, rootPath) {
+    const normalizedFile = normalizePath(filePath);
+    const normalizedRoot = normalizePath(rootPath);
+    return normalizedFile === normalizedRoot || normalizedFile.startsWith(`${normalizedRoot}/`);
+  }
+
+  function getRelativePath(filePath, rootPath) {
+    const normalizedFile = normalizePath(filePath);
+    const normalizedRoot = normalizePath(rootPath);
+    if (!normalizedFile.startsWith(normalizedRoot)) {
+      return filePath;
+    }
+    return normalizedFile.slice(normalizedRoot.length).replace(/^\/+/, "");
+  }
+
+  function normalizePath(value) {
+    return String(value || "").replace(/\\/g, "/").replace(/\/+$/, "");
+  }
+
+  function renderDiffPreview(diffPreview) {
+    const lines = String(diffPreview || "").split("\n");
+    const meaningfulLines = lines.filter((line) => {
+      return !line.startsWith("--- ") &&
+        !line.startsWith("+++ ") &&
+        !line.startsWith("@@ ");
+    });
+
+    if (meaningfulLines.length === 0) {
+      return null;
+    }
+
+    const section = document.createElement("div");
+    section.className = "tool-result-diff";
+
+    const label = document.createElement("div");
+    label.className = "tool-result-label";
+    label.textContent = "Changes";
+    section.appendChild(label);
+
+    const list = document.createElement("div");
+    list.className = "diff-preview";
+
+    meaningfulLines.forEach((line) => {
+      if (!line) {
+        return;
+      }
+
+      const row = document.createElement("div");
+      row.className = "diff-line";
+
+      const marker = document.createElement("span");
+      marker.className = "diff-line-marker";
+      marker.textContent = line[0] === "+" || line[0] === "-" ? line[0] : " ";
+
+      const content = document.createElement("span");
+      content.className = "diff-line-content";
+      content.textContent = line.slice(1);
+
+      if (line.startsWith("+")) {
+        row.classList.add("added");
+      } else if (line.startsWith("-")) {
+        row.classList.add("removed");
+      } else {
+        row.classList.add("context");
+      }
+
+      row.appendChild(marker);
+      row.appendChild(content);
+      list.appendChild(row);
+    });
+
+    section.appendChild(list);
+    return section;
   }
 
   function addToolParamsTooltip(element) {

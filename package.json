@@ -82,5 +82,8 @@
     "markdown-it": "^14.1.1",
     "openai": "^4.80.0",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   }
 }

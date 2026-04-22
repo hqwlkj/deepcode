@@ -1,7 +1,22 @@
 import * as fs from "fs";
 import * as path from "path";
+import { z } from "zod";
 import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
-import { createSnippet, getSnippet, wasFileRead } from "./state";
+import {
+  buildDiffPreview,
+  hasFileChangedSinceState,
+  readTextFileWithMetadata,
+  writeTextFile
+} from "./file-utils";
+import { executeValidatedTool, semanticBoolean } from "./runtime";
+import {
+  createSnippet,
+  getFileState,
+  getSnippet,
+  isFullFileView,
+  normalizeFilePath,
+  recordFileState
+} from "./state";
 
 const MAX_CANDIDATE_COUNT = 5;
 const REPLACE_ALL_MATCH_THRESHOLD = 5;
@@ -47,260 +62,294 @@ type CorrectedEditStrings = {
   newString: string;
 };
 
+const editSchema = z.strictObject({
+  file_path: z.string().optional(),
+  snippet_id: z.string().optional(),
+  old_string: z.string(),
+  new_string: z.string(),
+  replace_all: semanticBoolean(false).optional(),
+  expected_occurrences: z.preprocess((value) => {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+    if (typeof value === "string") {
+      return Number(value);
+    }
+    return value;
+  }, z.number().int().min(1, "expected_occurrences must be >= 1.").optional())
+});
+
 export async function handleEditTool(
   args: Record<string, unknown>,
   context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
-  const snippetId = typeof args.snippet_id === "string" ? args.snippet_id.trim() : "";
-  const snippet = snippetId ? getSnippet(context.sessionId, snippetId) : null;
+  return executeValidatedTool(
+    "edit",
+    editSchema,
+    args,
+    context,
+    async (input) => {
+      const snippetId = input.snippet_id?.trim() ?? "";
+      const snippet = snippetId ? getSnippet(context.sessionId, snippetId) : null;
 
-  let filePath = typeof args.file_path === "string" ? args.file_path : "";
-  if (!filePath.trim() && !snippet) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "Missing required \"file_path\" string or \"snippet_id\" string."
-    };
-  }
+      let filePath = input.file_path?.trim() ?? "";
+      if (!filePath && !snippet) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "Missing required \"file_path\" string or \"snippet_id\" string."
+        };
+      }
 
-  if (!filePath.trim() && snippet) {
-    filePath = snippet.filePath;
-  }
+      if (!filePath && snippet) {
+        filePath = snippet.filePath;
+      }
 
-  if (!path.isAbsolute(filePath)) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "file_path must be an absolute path."
-    };
-  }
+      filePath = normalizeFilePath(filePath);
+      if (!path.isAbsolute(filePath)) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "file_path must be an absolute path."
+        };
+      }
 
-  if (snippet && snippet.filePath !== filePath) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "snippet_id does not belong to the provided file_path."
-    };
-  }
+      if (snippetId && !snippet) {
+        return {
+          ok: false,
+          name: "edit",
+          error: `Unknown snippet_id: ${snippetId}`
+        };
+      }
 
-  if (snippetId && !snippet) {
-    return {
-      ok: false,
-      name: "edit",
-      error: `Unknown snippet_id: ${snippetId}`
-    };
-  }
+      if (snippet && snippet.filePath !== filePath) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "snippet_id does not belong to the provided file_path."
+        };
+      }
 
-  const oldString = typeof args.old_string === "string" ? args.old_string : null;
-  const newString = typeof args.new_string === "string" ? args.new_string : null;
-  if (oldString === null) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "Missing required \"old_string\" string."
-    };
-  }
-  if (newString === null) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "Missing required \"new_string\" string."
-    };
-  }
-  if (oldString === "") {
-    return {
-      ok: false,
-      name: "edit",
-      error: "old_string must not be empty."
-    };
-  }
-  if (oldString === newString) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "new_string must differ from old_string."
-    };
-  }
+      if (input.old_string === "") {
+        return {
+          ok: false,
+          name: "edit",
+          error: "old_string must not be empty."
+        };
+      }
 
-  const expectedOccurrencesResult = parseExpectedOccurrences(args.expected_occurrences);
-  if (!expectedOccurrencesResult.ok) {
-    return {
-      ok: false,
-      name: "edit",
-      error: expectedOccurrencesResult.error
-    };
-  }
+      if (input.old_string === input.new_string) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "new_string must differ from old_string."
+        };
+      }
 
-  if (!snippet && !wasFileRead(context.sessionId, filePath)) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "Must read file before editing."
-    };
-  }
+      if (!fs.existsSync(filePath)) {
+        return {
+          ok: false,
+          name: "edit",
+          error: `File not found: ${filePath}`
+        };
+      }
 
-  if (!fs.existsSync(filePath)) {
-    return {
-      ok: false,
-      name: "edit",
-      error: `File not found: ${filePath}`
-    };
-  }
+      let stat: fs.Stats;
+      try {
+        stat = fs.statSync(filePath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          ok: false,
+          name: "edit",
+          error: `Failed to stat file: ${message}`
+        };
+      }
 
-  let stat: fs.Stats;
-  try {
-    stat = fs.statSync(filePath);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      name: "edit",
-      error: `Failed to stat file: ${message}`
-    };
-  }
+      if (stat.isDirectory()) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "file_path points to a directory."
+        };
+      }
 
-  if (stat.isDirectory()) {
-    return {
-      ok: false,
-      name: "edit",
-      error: "file_path points to a directory."
-    };
-  }
+      const fileState = getFileState(context.sessionId, filePath);
+      if (!fileState) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "Must read file before editing."
+        };
+      }
 
-  const replaceAll = typeof args.replace_all === "boolean" ? args.replace_all : false;
+      if (!snippet && !isFullFileView(fileState)) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "File was only partially read. Use snippet_id or read the full file before editing."
+        };
+      }
 
-  try {
-    const raw = fs.readFileSync(filePath, "utf8");
-    const lineIndex = buildLineIndex(raw);
-    const scope = buildSearchScope(filePath, raw, lineIndex, snippet ?? null);
-    let matches = findOccurrences(raw, oldString, scope);
-    let matchedVia: "exact" | "loose_escape" | "llm_escape_correction" = "exact";
-    let replacementOldString = oldString;
-    let replacementNewString = newString;
+      if (hasFileChangedSinceState(filePath, fileState)) {
+        return {
+          ok: false,
+          name: "edit",
+          error: "File has been modified since read. Read it again before editing."
+        };
+      }
 
-    if (matches.length === 0) {
-      const looseEscapeMatches = findLooseEscapeMatches(raw, oldString, scope);
-      if (looseEscapeMatches.length === 1 && looseEscapeMatches[0]?.score === 1) {
-        const correctedStrings = await correctEscapedStringsWithLLM(
-          raw.slice(scope.startOffset, scope.endOffset),
-          oldString,
-          newString,
-          looseEscapeMatches[0].text,
-          context
-        );
+      try {
+        const metadata = readTextFileWithMetadata(filePath);
+        const raw = metadata.content;
+        const oldString = input.old_string;
+        const newString = input.new_string;
+        const replaceAll = input.replace_all ?? false;
+        const lineIndex = buildLineIndex(raw);
+        const scope = buildSearchScope(filePath, raw, lineIndex, snippet ?? null);
+        let matches = findOccurrences(raw, oldString, scope);
+        let matchedVia: "exact" | "loose_escape" | "llm_escape_correction" = "exact";
+        let replacementOldString = oldString;
+        let replacementNewString = newString;
 
-        if (correctedStrings) {
-          const correctedMatches = findOccurrences(raw, correctedStrings.oldString, scope);
-          if (correctedMatches.length > 0) {
-            matches = correctedMatches;
-            matchedVia = "llm_escape_correction";
-            replacementOldString = correctedStrings.oldString;
-            replacementNewString = correctedStrings.newString;
+        if (matches.length === 0) {
+          const looseEscapeMatches = findLooseEscapeMatches(raw, oldString, scope);
+          if (looseEscapeMatches.length === 1 && looseEscapeMatches[0]?.score === 1) {
+            const correctedStrings = await correctEscapedStringsWithLLM(
+              raw.slice(scope.startOffset, scope.endOffset),
+              oldString,
+              newString,
+              looseEscapeMatches[0].text,
+              context
+            );
+
+            if (correctedStrings) {
+              const correctedMatches = findOccurrences(raw, correctedStrings.oldString, scope);
+              if (correctedMatches.length > 0) {
+                matches = correctedMatches;
+                matchedVia = "llm_escape_correction";
+                replacementOldString = correctedStrings.oldString;
+                replacementNewString = correctedStrings.newString;
+              }
+            }
+
+            if (matches.length === 0) {
+              matches = [looseEscapeMatches[0]];
+              matchedVia = "loose_escape";
+            }
           }
         }
 
         if (matches.length === 0) {
-          matches = [looseEscapeMatches[0]];
-          matchedVia = "loose_escape";
+          const closestMatch = findClosestMatch(raw, oldString, scope, lineIndex);
+          return {
+            ok: false,
+            name: "edit",
+            error: "old_string not found in file.",
+            metadata: closestMatch
+              ? {
+                  scope: formatScopeMetadata(scope),
+                  closest_match: buildClosestMatchMetadata(
+                    context.sessionId,
+                    filePath,
+                    closestMatch
+                  )
+                }
+              : {
+                  scope: formatScopeMetadata(scope)
+                }
+          };
         }
-      }
-    }
 
-    if (matches.length === 0) {
-      const closestMatch = findClosestMatch(raw, oldString, scope, lineIndex);
-      return {
-        ok: false,
-        name: "edit",
-        error: "old_string not found in file.",
-        metadata: closestMatch
-          ? {
+        if (!replaceAll && matches.length > 1) {
+          return {
+            ok: false,
+            name: "edit",
+            error: "old_string is not unique; use snippet_id, replace_all, or provide more context.",
+            metadata: {
+              match_count: matches.length,
               scope: formatScopeMetadata(scope),
-              closest_match: buildClosestMatchMetadata(
-                context.sessionId,
-                filePath,
-                closestMatch
-              )
+              candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches)
             }
-          : {
-              scope: formatScopeMetadata(scope)
+          };
+        }
+
+        const expectedOccurrences = input.expected_occurrences ?? null;
+        const replaceAllGuardError = validateReplaceAllGuard({
+          replaceAll,
+          matchCount: matches.length,
+          oldString: replacementOldString,
+          expectedOccurrences
+        });
+        if (replaceAllGuardError) {
+          return {
+            ok: false,
+            name: "edit",
+            error: replaceAllGuardError,
+            metadata: {
+              match_count: matches.length,
+              scope: formatScopeMetadata(scope),
+              candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches)
             }
-      };
-    }
-
-    if (!replaceAll && matches.length > 1) {
-      return {
-        ok: false,
-        name: "edit",
-        error: "old_string is not unique; use snippet_id, replace_all, or provide more context.",
-        metadata: {
-          match_count: matches.length,
-          scope: formatScopeMetadata(scope),
-          candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches)
+          };
         }
-      };
-    }
 
-    const expectedOccurrences = expectedOccurrencesResult.value;
-    const replaceAllGuardError = validateReplaceAllGuard({
-      replaceAll,
-      matchCount: matches.length,
-      oldString: replacementOldString,
-      expectedOccurrences
-    });
-    if (replaceAllGuardError) {
-      return {
-        ok: false,
-        name: "edit",
-        error: replaceAllGuardError,
-        metadata: {
-          match_count: matches.length,
-          scope: formatScopeMetadata(scope),
-          candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches)
-        }
-      };
-    }
-
-    const updated = applyReplacement(raw, replacementOldString, replacementNewString, matches, replaceAll);
-    fs.writeFileSync(filePath, updated, "utf8");
-    const replacedCount = replaceAll ? matches.length : 1;
-    return {
-      ok: true,
-      name: "edit",
-      output: `Replaced ${replacedCount} occurrence(s) in ${filePath}.`,
-      metadata: {
-        replaced_count: replacedCount,
-        matched_via: matchedVia,
-        scope: formatScopeMetadata(scope)
+        const updated = applyReplacement(
+          raw,
+          replacementOldString,
+          replacementNewString,
+          matches,
+          replaceAll
+        );
+        const diffPreview = buildDiffPreview(filePath, raw, updated);
+        writeTextFile(filePath, updated, metadata.encoding, metadata.lineEndings);
+        const freshMetadata = readTextFileWithMetadata(filePath);
+        recordFileState(context.sessionId, {
+          filePath,
+          content: freshMetadata.content,
+          timestamp: freshMetadata.timestamp,
+          encoding: freshMetadata.encoding,
+          lineEndings: freshMetadata.lineEndings
+        });
+        const replacedCount = replaceAll ? matches.length : 1;
+        return {
+          ok: true,
+          name: "edit",
+          output: `Replaced ${replacedCount} occurrence(s) in ${filePath}.`,
+          metadata: {
+            file_path: filePath,
+            replaced_count: replacedCount,
+            matched_via: matchedVia,
+            cache_refreshed: true,
+            read_scope_type: snippet ? "snippet" : "full",
+            encoding: freshMetadata.encoding,
+            line_endings: freshMetadata.lineEndings,
+            diff_preview: diffPreview,
+            scope: formatScopeMetadata(scope)
+          }
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          ok: false,
+          name: "edit",
+          error: message
+        };
       }
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      ok: false,
-      name: "edit",
-      error: message
-    };
-  }
-}
-
-function parseExpectedOccurrences(
-  value: unknown
-): { ok: true; value: number | null } | { ok: false; error: string } {
-  if (value === undefined || value === null) {
-    return { ok: true, value: null };
-  }
-
-  const numeric = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(numeric)) {
-    return { ok: false, error: "expected_occurrences must be a number." };
-  }
-
-  const integer = Math.trunc(numeric);
-  if (integer < 1) {
-    return { ok: false, error: "expected_occurrences must be >= 1." };
-  }
-
-  return { ok: true, value: integer };
+    },
+    {
+      preprocess: (rawInput) => {
+        const nextInput = { ...rawInput };
+        if (typeof nextInput.file_path === "string") {
+          nextInput.file_path = normalizeFilePath(nextInput.file_path);
+        }
+        if (typeof nextInput.snippet_id === "string") {
+          nextInput.snippet_id = nextInput.snippet_id.trim();
+        }
+        return { ok: true, input: nextInput };
+      }
+    }
+  );
 }
 
 function buildLineIndex(raw: string): LineIndex {

@@ -447,6 +447,104 @@ body {
   max-height: 300px;
 }
 
+.tool-result-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--vscode-font-family);
+  white-space: normal;
+}
+
+.tool-result-summary {
+  color: var(--vscode-foreground);
+  line-height: 1.5;
+}
+
+.tool-result-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tool-result-label {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tool-result-filepath {
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground, var(--vscode-button-background));
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+
+.tool-result-filepath:hover {
+  color: var(--vscode-textLink-activeForeground, var(--vscode-button-hoverBackground));
+}
+
+.tool-result-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diff-preview {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--vscode-editor-background);
+}
+
+.diff-line {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 0;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff-line + .diff-line {
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+.diff-line-marker {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6px 0;
+  color: var(--vscode-descriptionForeground);
+  user-select: none;
+}
+
+.diff-line-content {
+  display: block;
+  padding: 6px 10px 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-line.added {
+  background: color-mix(in srgb, var(--vscode-diffEditor-insertedLineBackground, rgba(46, 160, 67, 0.18)) 100%, transparent);
+}
+
+.diff-line.removed {
+  background: color-mix(in srgb, var(--vscode-diffEditor-removedLineBackground, rgba(248, 81, 73, 0.16)) 100%, transparent);
+}
+
+.diff-line.context {
+  background: var(--vscode-editor-background);
+}
+
 /* assistant 角色的展开内容无边框 */
 .bubble.assistant .bubble-collapsible-content {
   border: none;

@@ -6,6 +6,7 @@ import * as path from "path";
 import type { ToolExecutionContext } from "../tools/executor";
 import { handleEditTool } from "../tools/edit-handler";
 import { handleReadTool } from "../tools/read-handler";
+import { handleWriteTool } from "../tools/write-handler";
 
 const tempDirs: string[] = [];
 
@@ -51,6 +52,11 @@ test("Read returns snippet metadata and Edit can scope replacements by snippet_i
   );
 
   assert.equal(editResult.ok, true);
+  assert.equal(editResult.metadata?.file_path, filePath);
+  assert.equal(editResult.metadata?.read_scope_type, "snippet");
+  assert.equal(editResult.metadata?.cache_refreshed, true);
+  assert.equal(editResult.metadata?.line_endings, "LF");
+  assert.match(String(editResult.metadata?.diff_preview ?? ""), /\+target = 2/);
   assert.equal(
     fs.readFileSync(filePath, "utf8"),
     ["alpha", "target = 1", "omega", "beta", "target = 2", "done"].join("\n")
@@ -182,6 +188,150 @@ test("Edit accepts a unique loose-escape match when only escaping differs", asyn
   assert.equal(editResult.ok, true);
   assert.equal(editResult.metadata?.matched_via, "llm_escape_correction");
   assert.equal(fs.readFileSync(filePath, "utf8"), "params['city_json'] = city\n");
+});
+
+test("Write repairs JSON object content for .json files", async () => {
+  const workspace = createTempWorkspace();
+  const filePath = path.join(workspace, "package.json");
+
+  const writeResult = await handleWriteTool(
+    {
+      file_path: filePath,
+      content: {
+        name: "demo",
+        private: true
+      } as unknown as string
+    },
+    createContext("write-json-object", workspace)
+  );
+
+  assert.equal(writeResult.ok, true);
+  assert.equal(writeResult.metadata?.type, "create");
+  assert.equal(writeResult.metadata?.file_path, filePath);
+  assert.equal(writeResult.metadata?.cache_refreshed, true);
+  assert.equal(writeResult.metadata?.line_endings, "LF");
+  assert.equal(writeResult.metadata?.input_repaired, true);
+  assert.match(String(writeResult.metadata?.diff_preview ?? ""), /\+\s*"name": "demo"|^\+\{/m);
+  assert.equal(
+    fs.readFileSync(filePath, "utf8"),
+    '{\n  "name": "demo",\n  "private": true\n}'
+  );
+});
+
+test("Write updates file state so a follow-up Edit can succeed without another Read", async () => {
+  const workspace = createTempWorkspace();
+  const filePath = path.join(workspace, "note.txt");
+
+  const writeResult = await handleWriteTool(
+    {
+      file_path: filePath,
+      content: "alpha\nbeta\n"
+    },
+    createContext("write-then-edit", workspace)
+  );
+
+  assert.equal(writeResult.ok, true);
+  assert.equal(writeResult.metadata?.type, "create");
+  assert.equal(writeResult.metadata?.cache_refreshed, true);
+
+  const editResult = await handleEditTool(
+    {
+      file_path: filePath,
+      old_string: "beta",
+      new_string: "gamma"
+    },
+    createContext("write-then-edit", workspace)
+  );
+
+  assert.equal(editResult.ok, true);
+  assert.equal(editResult.metadata?.read_scope_type, "full");
+  assert.match(String(editResult.metadata?.diff_preview ?? ""), /-beta/);
+  assert.match(String(editResult.metadata?.diff_preview ?? ""), /\+gamma/);
+  assert.equal(fs.readFileSync(filePath, "utf8"), "alpha\ngamma\n");
+});
+
+test("Write requires a full read before overwriting an existing file", async () => {
+  const workspace = createTempWorkspace();
+  const filePath = path.join(workspace, "config.txt");
+  fs.writeFileSync(filePath, "line1\nline2\nline3\n", "utf8");
+
+  const sessionId = "write-full-read";
+  await handleReadTool({ file_path: filePath, offset: 2, limit: 1 }, createContext(sessionId, workspace));
+
+  const blockedResult = await handleWriteTool(
+    {
+      file_path: filePath,
+      content: "rewritten"
+    },
+    createContext(sessionId, workspace)
+  );
+
+  assert.equal(blockedResult.ok, false);
+  assert.equal(blockedResult.error, "Must read the full existing file before writing.");
+});
+
+test("Edit rejects stale reads after the file changes on disk", async () => {
+  const workspace = createTempWorkspace();
+  const filePath = path.join(workspace, "stale.txt");
+  fs.writeFileSync(filePath, "before\n", "utf8");
+
+  const sessionId = "stale-edit";
+  await handleReadTool({ file_path: filePath }, createContext(sessionId, workspace));
+
+  fs.writeFileSync(filePath, "after\n", "utf8");
+  const futureTime = new Date(Date.now() + 2000);
+  fs.utimesSync(filePath, futureTime, futureTime);
+
+  const editResult = await handleEditTool(
+    {
+      file_path: filePath,
+      old_string: "after",
+      new_string: "final"
+    },
+    createContext(sessionId, workspace)
+  );
+
+  assert.equal(editResult.ok, false);
+  assert.equal(editResult.error, "File has been modified since read. Read it again before editing.");
+});
+
+test("Write preserves the exact trailing newline policy from the provided content", async () => {
+  const workspace = createTempWorkspace();
+  const filePath = path.join(workspace, "newline.txt");
+
+  const writeResult = await handleWriteTool(
+    {
+      file_path: filePath,
+      content: "no trailing newline"
+    },
+    createContext("write-no-newline", workspace)
+  );
+
+  assert.equal(writeResult.ok, true);
+  assert.match(String(writeResult.metadata?.diff_preview ?? ""), /\+no trailing newline/);
+  assert.equal(fs.readFileSync(filePath, "utf8"), "no trailing newline");
+});
+
+test("Edit preserves CRLF line endings for existing files", async () => {
+  const workspace = createTempWorkspace();
+  const filePath = path.join(workspace, "windows.txt");
+  fs.writeFileSync(filePath, "alpha\r\nbeta\r\n", "utf8");
+
+  const sessionId = "crlf-edit";
+  await handleReadTool({ file_path: filePath }, createContext(sessionId, workspace));
+
+  const editResult = await handleEditTool(
+    {
+      file_path: filePath,
+      old_string: "beta",
+      new_string: "gamma"
+    },
+    createContext(sessionId, workspace)
+  );
+
+  assert.equal(editResult.ok, true);
+  assert.equal(editResult.metadata?.line_endings, "CRLF");
+  assert.equal(fs.readFileSync(filePath, "utf8"), "alpha\r\ngamma\r\n");
 });
 
 function createContext(

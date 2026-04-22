@@ -103,6 +103,12 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (message?.type === "backToList") {
         this.showSessionsList();
+      } else if (message?.type === "openFile") {
+        const filePath = String(message.filePath || "").trim();
+        const line = Number(message.line || 1);
+        if (filePath) {
+          await this.openFileInEditor(filePath, line);
+        }
       }
     });
   }
@@ -371,8 +377,24 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     html = html.replace(/\{\{cssUri\}\}/g, cssUri.toString());
     html = html.replace(/\{\{attachmentsJsUri\}\}/g, attachmentsJsUri.toString());
     html = html.replace(/\{\{iconUri\}\}/g, iconUri.toString());
+    html = html.replace(/\{\{workspaceRoot\}\}/g, JSON.stringify(this.getWorkspaceRoot()));
 
     return html;
+  }
+
+  private async openFileInEditor(filePath: string, line: number): Promise<void> {
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+    const editor = await vscode.window.showTextDocument(document, {
+      preview: false,
+      preserveFocus: false
+    });
+
+    const targetLine = Number.isFinite(line) && line > 0 ? Math.floor(line) - 1 : 0;
+    const safeLine = Math.min(Math.max(0, targetLine), Math.max(0, document.lineCount - 1));
+    const position = new vscode.Position(safeLine, 0);
+    const selection = new vscode.Selection(position, position);
+    editor.selection = selection;
+    editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
   }
 }
 
