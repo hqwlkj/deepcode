@@ -1,7 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import ignore from "ignore";
-import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
+import type {
+  ToolExecutionContext,
+  ToolExecutionFollowUpMessage,
+  ToolExecutionResult
+} from "./executor";
 import { readTextFileWithMetadata } from "./file-utils";
 import { createSnippet, markFileRead } from "./state";
 
@@ -209,7 +213,6 @@ export async function handleReadTool(
     if (isImageExtension(ext)) {
       const buffer = fs.readFileSync(filePath);
       const mime = getImageMimeType(ext);
-      const base64 = buffer.toString("base64");
       markFileRead(context.sessionId, filePath, {
         content: "",
         timestamp: Math.floor(stat.mtimeMs),
@@ -218,12 +221,14 @@ export async function handleReadTool(
       return {
         ok: true,
         name: "read",
-        output: `data:${mime};base64,${base64}`,
+        output: "File loaded.",
         metadata: {
           mime,
-          encoding: "base64",
           bytes: buffer.length
-        }
+        },
+        followUpMessages: [
+          buildImageFollowUpMessage(filePath, mime, buffer)
+        ]
       };
     }
 
@@ -513,6 +518,28 @@ function getImageMimeType(ext: string): string {
     default:
       return "image/png";
   }
+}
+
+function buildImageFollowUpMessage(
+  filePath: string,
+  mime: string,
+  buffer: Buffer
+): ToolExecutionFollowUpMessage {
+  const fileName = path.basename(filePath);
+  return {
+    role: "system",
+    content:
+      `The read tool has loaded \`${fileName}\`. ` +
+      "Use the attached image content to answer the original request.",
+    contentParams: [
+      {
+        type: "image_url",
+        image_url: {
+          url: `data:${mime};base64,${buffer.toString("base64")}`
+        }
+      }
+    ]
+  };
 }
 
 function countPdfPages(buffer: Buffer): number | null {

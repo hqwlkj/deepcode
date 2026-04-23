@@ -942,14 +942,18 @@ ${skillMd}
     return null;
   }
 
-  private buildSystemMessage(sessionId: string, content: string): SessionMessage {
+  private buildSystemMessage(
+    sessionId: string,
+    content: string,
+    contentParams: unknown | null = null
+  ): SessionMessage {
     const now = new Date().toISOString();
     return {
       id: crypto.randomUUID(),
       sessionId,
       role: "system",
       content,
-      contentParams: null,
+      contentParams,
       messageParams: null,
       compacted: false,
       visible: false,
@@ -1046,6 +1050,7 @@ ${skillMd}
       return { waitingForUser: false };
     }
     let waitingForUser = false;
+    const followUpMessages: SessionMessage[] = [];
     for (const execution of toolExecutions) {
       if (execution.result.awaitUserResponse === true) {
         waitingForUser = true;
@@ -1059,6 +1064,23 @@ ${skillMd}
       );
       this.appendSessionMessage(sessionId, toolMessage);
       this.onAssistantMessage(toolMessage, true);
+
+      for (const followUpMessage of execution.result.followUpMessages ?? []) {
+        if (followUpMessage.role !== "system") {
+          continue;
+        }
+        followUpMessages.push(
+          this.buildSystemMessage(
+            sessionId,
+            followUpMessage.content,
+            followUpMessage.contentParams ?? null
+          )
+        );
+      }
+    }
+
+    for (const followUpMessage of followUpMessages) {
+      this.appendSessionMessage(sessionId, followUpMessage);
     }
     return { waitingForUser };
   }
@@ -1086,7 +1108,7 @@ ${skillMd}
             (base as { reasoning_content?: string }).reasoning_content = messageParams.reasoning_content;
           }
 
-          if (message.role === "user" && message.contentParams) {
+          if ((message.role === "user" || message.role === "system") && message.contentParams) {
             const contentParts: ChatCompletionContentPart[] = [];
             if (message.content) {
               contentParts.push({ type: "text", text: message.content });

@@ -44,6 +44,13 @@ export type ToolExecutionResult = {
   error?: string;
   metadata?: Record<string, unknown>;
   awaitUserResponse?: boolean;
+  followUpMessages?: ToolExecutionFollowUpMessage[];
+};
+
+export type ToolExecutionFollowUpMessage = {
+  role: "system";
+  content: string;
+  contentParams?: unknown | null;
 };
 
 export type ToolHandler = (
