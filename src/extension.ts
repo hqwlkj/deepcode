@@ -288,6 +288,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
   private createOpenAIClient(): {
     client: OpenAI | null;
     model: string;
+    baseURL: string;
     thinkingEnabled: boolean;
     notify?: string;
     webSearchTool?: string;
@@ -299,7 +300,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     const machineId = vscode.env.machineId;
 
     if (!apiKey) {
-      return { client: null, model, thinkingEnabled, notify, webSearchTool, machineId };
+      return { client: null, model, baseURL, thinkingEnabled, notify, webSearchTool, machineId };
     }
 
     const client = new OpenAI({
@@ -307,7 +308,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       baseURL: baseURL || undefined
     });
 
-    return { client, model, thinkingEnabled, notify, webSearchTool, machineId };
+    return { client, model, baseURL, thinkingEnabled, notify, webSearchTool, machineId };
   }
 
   private resolveCurrentSettings() {

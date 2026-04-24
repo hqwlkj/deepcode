@@ -9,6 +9,7 @@ import { handleWriteTool } from "./write-handler";
 export type CreateOpenAIClient = () => {
   client: OpenAI | null;
   model: string;
+  baseURL?: string;
   thinkingEnabled: boolean;
   notify?: string;
   webSearchTool?: string;

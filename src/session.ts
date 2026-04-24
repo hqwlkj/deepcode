@@ -5,6 +5,7 @@ import * as crypto from "crypto";
 import matter from "gray-matter";
 import type { ChatCompletionMessageParam, ChatCompletionContentPart } from "openai/resources/chat/completions";
 import { launchNotifyScript } from "./notify";
+import { buildThinkingRequestOptions } from "./openai-thinking";
 import { getCompactPrompt, getSystemPrompt, getTools, AGENT_DRIFT_GUARD_SKILL } from "./prompt";
 import { ToolExecutor, type CreateOpenAIClient } from "./tools/executor";
 
@@ -487,7 +488,7 @@ ${skillMd}
 
   async activateSession(sessionId: string): Promise<void> {
     const startedAt = Date.now();
-    const { client, model, thinkingEnabled, notify } = this.createOpenAIClient();
+    const { client, model, baseURL, thinkingEnabled, notify } = this.createOpenAIClient();
     const now = new Date().toISOString();
 
     if (!client) {
@@ -536,13 +537,13 @@ ${skillMd}
         }
 
         const messages = this.buildOpenAIMessages(this.listSessionMessages(sessionId));
+        const thinkingOptions = buildThinkingRequestOptions(thinkingEnabled, baseURL);
         const response = await client.chat.completions.create(
             {
               model,
               messages,
               tools: getTools(this.getPromptToolOptions()),
-              // @ts-ignore
-              thinking: thinkingEnabled ? { type: "enabled" } : undefined
+              ...thinkingOptions
             },
             { signal: controller.signal }
         );
@@ -636,7 +637,7 @@ ${skillMd}
   }
 
   async compactSession(sessionId: string): Promise<void> {
-    const { client, model, thinkingEnabled } = this.createOpenAIClient();
+    const { client, model, baseURL, thinkingEnabled } = this.createOpenAIClient();
     if (!client) {
       return;
     }
@@ -665,11 +666,11 @@ ${skillMd}
     }
 
     const compactPrompt = getCompactPrompt(sessionMessages.slice(startIndex, endIndex));
+    const thinkingOptions = buildThinkingRequestOptions(thinkingEnabled, baseURL);
     const response = await client.chat.completions.create({
       model,
       messages: [{ role: "user", content: compactPrompt }],
-      // @ts-ignore
-      thinking: thinkingEnabled ? { type: "enabled" } : undefined
+      ...thinkingOptions
     });
     const llmResponse = response.choices?.[0]?.message?.content ?? "";
     const compactedSummary = llmResponse.replace(/<analysis>[\s\S]*?<\/analysis>/gi, "").trim();
