@@ -226,7 +226,7 @@ Persist state and notify the webview
   "env": {
     "API_KEY": "sk-...",
     "BASE_URL": "https://api.deepseek.com",
-    "MODEL": "deepseek-reasoner"
+    "MODEL": "deepseek-v4-pro"
   },
   "thinkingEnabled": true,
   "notify": "~/.deepcode/notify.sh"
@@ -239,7 +239,7 @@ Persist state and notify the webview
 |-------|------|----------|---------|-------------|
 | `env.API_KEY` | string | Yes | - | API key for the configured provider |
 | `env.BASE_URL` | string | No | `https://api.deepseek.com` | Base URL for a DeepSeek or other OpenAI-compatible endpoint |
-| `env.MODEL` | string | No | `deepseek-reasoner` | Model identifier passed to `chat.completions.create()` |
+| `env.MODEL` | string | No | `deepseek-v4-pro` | Model identifier passed to `chat.completions.create()` |
 | `thinkingEnabled` | boolean | No | false | Enables the optional `thinking` request field when set to `true` |
 | `notify` | string | No | - | Executable script path triggered when a task ends in `completed` or `failed`, with `DURATION` set to the elapsed seconds |
 

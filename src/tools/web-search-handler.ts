@@ -6,6 +6,7 @@ import type { CreateOpenAIClient, ToolExecutionContext, ToolExecutionResult } fr
 const MAX_OUTPUT_CHARS = 30000;
 const MAX_CAPTURE_CHARS = 10 * 1024 * 1024;
 const WEB_SEARCH_TOOL_ACTIVITY_PREFIX = "WebSearch:";
+const DEFAULT_WEB_SEARCH_API_URL = "https://deepcode.vegamo.cn/api/plugin/web-search";
 
 type SearchLanguage = "en" | "zh";
 
@@ -26,6 +27,7 @@ type LLMClientContext = {
   thinkingEnabled: boolean;
   notify?: string;
   webSearchTool?: string;
+  machineId?: string;
 };
 
 export async function handleWebSearchTool(
@@ -122,8 +124,11 @@ async function executeDefaultWebSearch(
 ): Promise<ToolExecutionResult> {
   try {
     const prepared = await prepareSearchQuery(query, llmContext);
-    const prompt = buildSearchPrompt(prepared.resolvedQuery);
-    const output = await runLLMWebSearch(prompt, prepared.resolvedQuery, llmContext, context);
+    const output = await runDefaultWebSearchRequest(
+      prepared.resolvedQuery,
+      llmContext.machineId,
+      context
+    );
 
     return {
       ok: true,
@@ -316,107 +321,51 @@ function stripCodeFence(text: string): string {
   return fenceMatch ? fenceMatch[1] : trimmed;
 }
 
-function buildSearchPrompt(query: string): string {
-  return `Use web search to answer the user's query with up-to-date information.
-
-<query>
-${query}
-</query>
-
-CRITICAL REQUIREMENT - You MUST follow this:
-  - After answering the user's question, you MUST include a "Sources:" section at the end of your response
-  - In the Sources section, list all relevant URLs from the search results as markdown hyperlinks: [Title](URL)
-  - This is mandatory. Never skip including sources in your response.`;
-}
-
-async function runLLMWebSearch(
-  prompt: string,
+async function runDefaultWebSearchRequest(
   query: string,
-  llmContext: LLMClientContext,
+  machineId: string | undefined,
   context: ToolExecutionContext
 ): Promise<string> {
+  if (!machineId) {
+    throw new Error("Missing vscode.env.machineId for the default WebSearch request.");
+  }
+
   const activityId = `web-search-${randomUUID()}`;
   context.onProcessStart?.(activityId, formatWebSearchActivityLabel(query));
   try {
-    let primaryError: Error | null = null;
-    try {
-      const response = await llmContext.client.responses.create({
-        model: llmContext.model,
-        input: prompt,
-        tools: [{ type: "web_search_preview", search_context_size: "medium" }]
-      });
-      const text = getOpenAIResponseText(response);
-      if (text) {
-        return text;
-      }
-      primaryError = new Error("The responses API returned an empty web search response.");
-    } catch (error) {
-      primaryError = error instanceof Error ? error : new Error(String(error));
+    const response = await fetch(DEFAULT_WEB_SEARCH_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Token: machineId
+      },
+      body: JSON.stringify({ query })
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `WebSearch API request failed with status ${response.status}${body ? `: ${body}` : ""}`
+      );
     }
 
-    const fallback = await runChatCompletionsWebSearch(prompt, llmContext).catch((fallbackError) => {
-      const primaryMessage = primaryError?.message ?? "Unknown responses API failure";
-      const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-      throw new Error(`${primaryMessage}; fallback failed: ${fallbackMessage}`);
-    });
-    if (fallback) {
-      return fallback;
+    const payload = (await response.json()) as {
+      success?: unknown;
+      result?: unknown;
+    };
+
+    if (payload.success !== true) {
+      throw new Error("WebSearch API returned success=false.");
+    }
+
+    if (typeof payload.result === "string" && payload.result.trim()) {
+      return payload.result.trim();
     }
   } finally {
     context.onProcessExit?.(activityId);
   }
 
   throw new Error("The web search response was empty.");
-}
-
-async function runChatCompletionsWebSearch(
-  prompt: string,
-  llmContext: LLMClientContext
-): Promise<string> {
-  const response = await llmContext.client.chat.completions.create({
-    model: llmContext.model,
-    messages: [{ role: "user", content: prompt }],
-    web_search_options: {
-      search_context_size: "medium"
-    }
-  });
-
-  const content = response.choices?.[0]?.message?.content as unknown;
-  if (typeof content === "string") {
-    return content.trim();
-  }
-  if (Array.isArray(content)) {
-    return (content as Array<{ text?: string }>)
-      .map((part) => (typeof part.text === "string" ? part.text : ""))
-      .join("\n")
-      .trim();
-  }
-  return "";
-}
-
-function getOpenAIResponseText(response: unknown): string {
-  const record = response as {
-    output_text?: unknown;
-    output?: Array<{ content?: Array<{ type?: unknown; text?: unknown }> }>;
-  };
-
-  if (typeof record.output_text === "string" && record.output_text.trim()) {
-    return record.output_text.trim();
-  }
-
-  const chunks: string[] = [];
-  for (const item of record.output ?? []) {
-    for (const content of item.content ?? []) {
-      if (
-        (content.type === "output_text" || content.type === "text") &&
-        typeof content.text === "string" &&
-        content.text
-      ) {
-        chunks.push(content.text);
-      }
-    }
-  }
-  return chunks.join("\n").trim();
 }
 
 function appendChunk(existing: string, chunk: string | Buffer): string {

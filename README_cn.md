@@ -1,6 +1,6 @@
 # Deep Code
 
-[Deep Code](https://marketplace.visualstudio.com/items?itemName=vegamo.deepcode-vscode) 是 Visual Studio Code 的 AI 编码助手扩展，专门为最新的 `deepseek` 模型优化。
+[Deep Code](https://marketplace.visualstudio.com/items?itemName=vegamo.deepcode-vscode) 是 Visual Studio Code 的 AI 编码助手扩展，专门为最新的 `deepseek-v4` 模型优化。
 
 ## 配置
 
@@ -9,7 +9,7 @@
 ```json
 {
   "env": {
-    "MODEL": "deepseek-reasoner",
+    "MODEL": "deepseek-v4-pro",
     "BASE_URL": "https://api.deepseek.com",
     "API_KEY": "sk-..."
   },
@@ -30,7 +30,9 @@ Deep Code 支持 agent skills，允许您扩展助手的能力：
 - 通过使用[上下文缓存](https://api-docs.deepseek.com/guides/kv_cache)来降低成本。
 
 ## 支持的模型
-- `deepseek-reasoner`（[思考模式](https://api-docs.deepseek.com/guides/kv_cache)，推荐使用）
+- `deepseek-v4-pro`（[思考模式](https://api-docs.deepseek.com/guides/kv_cache)，推荐使用）
+- `deepseek-v4-flash`
+- `deepseek-v4-pro`
 - `deepseek-chat`
 - 任何其他 OpenAI 兼容模型
 

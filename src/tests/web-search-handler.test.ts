@@ -8,8 +8,10 @@ import type { ToolExecutionContext } from "../tools/executor";
 import { handleWebSearchTool } from "../tools/web-search-handler";
 
 const tempDirs: string[] = [];
+const originalFetch = globalThis.fetch;
 
 afterEach(() => {
+  globalThis.fetch = originalFetch;
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) {
@@ -54,28 +56,17 @@ test("WebSearch executes the configured script with the query as one argument", 
   assert.deepEqual(exits, [starts[0].id]);
 });
 
-test("WebSearch falls back to the configured LLM when no script is configured", async () => {
+test("WebSearch uses the default API when no script is configured", async () => {
   const workspace = createTempWorkspace();
   const starts: Array<{ id: string | number; command: string }> = [];
   const exits: Array<string | number> = [];
+  const fetchCalls: Array<{ input: string | URL; init?: RequestInit }> = [];
 
   const fakeClient = {
     chat: {
       completions: {
-        create: async ({ messages, web_search_options }: { messages: Array<{ content: string }>; web_search_options?: unknown }) => {
+        create: async ({ messages }: { messages: Array<{ content: string }> }) => {
           const prompt = messages[0]?.content ?? "";
-          if (web_search_options) {
-            return {
-              choices: [
-                {
-                  message: {
-                    content:
-                      "Node.js 24 is the latest release.\n\nSources:\n- [Node.js Releases](https://nodejs.org/en/about/previous-releases)"
-                  }
-                }
-              ]
-            };
-          }
           if (prompt.includes("Return strict JSON:")) {
             return {
               choices: [
@@ -91,29 +82,51 @@ test("WebSearch falls back to the configured LLM when no script is configured", 
         }
       }
     },
-    responses: {
-      create: async () => ({
-        output_text:
-          "Node.js 24 is the latest release.\n\nSources:\n- [Node.js Releases](https://nodejs.org/en/about/previous-releases)"
-      })
-    }
   } as unknown as OpenAI;
+
+  globalThis.fetch = (async (input: string | URL, init?: RequestInit) => {
+    fetchCalls.push({ input, init });
+    return {
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: JSON.stringify(
+          {
+            organic_results: [
+              {
+                title: "Node.js Releases",
+                link: "https://nodejs.org/en/about/previous-releases"
+              }
+            ]
+          },
+          null,
+          2
+        )
+      })
+    } as Response;
+  }) as typeof fetch;
 
   const result = await handleWebSearchTool(
     { query: "latest node release" },
     createContext(workspace, {
       client: fakeClient,
+      machineId: "machine-id-123",
       onProcessStart: (id, command) => starts.push({ id, command }),
       onProcessExit: (id) => exits.push(id)
     })
   );
 
   assert.equal(result.ok, true);
-  assert.match(result.output ?? "", /Node\.js 24 is the latest release/);
+  assert.match(result.output ?? "", /Node\.js Releases/);
   assert.equal(result.metadata?.resolvedQuery, "latest node release");
   assert.equal(starts.length, 1);
   assert.equal(starts[0].id, exits[0]);
   assert.equal(starts[0].command, "WebSearch: latest node release");
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(String(fetchCalls[0].input), "https://deepcode.vegamo.cn/api/plugin/web-search");
+  assert.equal(fetchCalls[0].init?.method, "POST");
+  assert.deepEqual(JSON.parse(String(fetchCalls[0].init?.body)), { query: "latest node release" });
+  assert.equal((fetchCalls[0].init?.headers as Record<string, string>).Token, "machine-id-123");
 });
 
 test("WebSearch returns a configuration error when neither a script nor an LLM client is available", async () => {
@@ -135,6 +148,7 @@ function createContext(
   options: {
     client?: OpenAI | null;
     webSearchTool?: string;
+    machineId?: string;
     onProcessStart?: (processId: string | number, command: string) => void;
     onProcessExit?: (processId: string | number) => void;
   } = {}
@@ -154,7 +168,8 @@ function createContext(
       client: options.client ?? null,
       model: "test-model",
       thinkingEnabled: false,
-      webSearchTool: options.webSearchTool
+      webSearchTool: options.webSearchTool,
+      machineId: options.machineId
     }),
     onProcessStart: options.onProcessStart,
     onProcessExit: options.onProcessExit

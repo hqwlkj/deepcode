@@ -1,6 +1,6 @@
 # Deep Code
 
-[Deep Code](https://marketplace.visualstudio.com/items?itemName=vegamo.deepcode-vscode) is an AI coding assistant extension for Visual Studio Code, specifically optimized for the latest `deepseek` model.
+[Deep Code](https://marketplace.visualstudio.com/items?itemName=vegamo.deepcode-vscode) is an AI coding assistant extension for Visual Studio Code, specifically optimized for the latest `deepseek-v4` model.
 
 ## Configuration
 
@@ -9,7 +9,7 @@ Create `~/.deepcode/settings.json` with:
 ```json
 {
   "env": {
-    "MODEL": "deepseek-reasoner",
+    "MODEL": "deepseek-v4-pro",
     "BASE_URL": "https://api.deepseek.com",
     "API_KEY": "sk-..."
   },
@@ -30,7 +30,10 @@ Deep Code supports agent skills that allows you to extend the assistant's capabi
 - Reduce costs by using [Context Caching](https://api-docs.deepseek.com/guides/kv_cache).
 
 ## Supported Models
-- `deepseek-reasoner` ([thinking mode](https://api-docs.deepseek.com/guides/kv_cache), recommended)
+
+- `deepseek-v4-pro` ([thinking mode](https://api-docs.deepseek.com/guides/kv_cache), recommended)
+- `deepseek-v4-flash`
+- `deepseek-v4-pro`
 - `deepseek-chat`
 - Any other OpenAI-compatible model
 

@@ -12,6 +12,7 @@ export type CreateOpenAIClient = () => {
   thinkingEnabled: boolean;
   notify?: string;
   webSearchTool?: string;
+  machineId?: string;
 };
 
 export type ToolCall = {
