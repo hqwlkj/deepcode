@@ -816,12 +816,36 @@ ${skillMd}
     for (const line of lines) {
       try {
         const parsed = JSON.parse(line) as SessionMessage;
-        messages.push(parsed);
+        messages.push(this.normalizeSessionMessage(parsed));
       } catch {
         // ignore malformed line
       }
     }
     return messages;
+  }
+
+  private normalizeSessionMessage(message: SessionMessage): SessionMessage {
+    if (message.role !== "tool") {
+      return message;
+    }
+
+    const nextMeta = message.meta ? { ...message.meta } : undefined;
+    const normalizedParamsMd = this.buildToolParamsSnippet(nextMeta?.function ?? null);
+    if (nextMeta && normalizedParamsMd) {
+      nextMeta.paramsMd = normalizedParamsMd;
+    }
+
+    const normalizedResultMd =
+      typeof message.content === "string" ? this.buildToolResultSnippet(message.content) : "";
+    if (nextMeta && normalizedResultMd) {
+      nextMeta.resultMd = normalizedResultMd;
+    }
+
+    return {
+      ...message,
+      visible: typeof message.content === "string" ? !this.isInvisibleExecution(message.content) : message.visible,
+      meta: nextMeta
+    };
   }
 
   private getProjectCode(projectRoot: string): string {
@@ -1195,21 +1219,43 @@ ${skillMd}
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        const firstKey = Object.keys(parsed)[0];
-        if (firstKey) {
-          const value = (parsed as Record<string, unknown>)[firstKey];
-          const text = typeof value === "string" ? value : JSON.stringify(value);
-          if (toolName === "read" && text.startsWith(this.projectRoot)) {
-            return text.slice(this.projectRoot.length).replace(/^[\\/]/, "");
-          } else {
-            return text;
-          }
-        }
+        return this.formatToolParamsSnippet(
+          typeof toolName === "string" ? toolName : null,
+          parsed as Record<string, unknown>
+        );
       }
     } catch {
       // fall back to raw string
     }
     return trimmed;
+  }
+
+  private formatToolParamsSnippet(toolName: string | null, args: Record<string, unknown>): string {
+    if (toolName === "bash") {
+      const command = typeof args.command === "string" ? args.command.trim() : "";
+      const description = typeof args.description === "string" ? args.description.trim() : "";
+      if (command && description) {
+        return `${command}  # ${description}`;
+      }
+      if (command) {
+        return command;
+      }
+      if (description) {
+        return description;
+      }
+    }
+
+    const firstKey = Object.keys(args)[0];
+    if (!firstKey) {
+      return "";
+    }
+
+    const value = args[firstKey];
+    const text = typeof value === "string" ? value : JSON.stringify(value);
+    if (toolName === "read" && text.startsWith(this.projectRoot)) {
+      return text.slice(this.projectRoot.length).replace(/^[\\/]/, "");
+    }
+    return text;
   }
 
   private buildToolResultSnippet(content: string): string {
