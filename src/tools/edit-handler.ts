@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
+import { buildThinkingRequestOptions } from "../openai-thinking";
 import type { ToolExecutionContext, ToolExecutionResult } from "./executor";
 import {
   buildDiffPreview,
@@ -709,7 +710,7 @@ async function correctEscapedStringsWithLLM(
     return null;
   }
 
-  const { client, model, thinkingEnabled } = clientFactory();
+  const { client, model, baseURL, thinkingEnabled, reasoningEffort } = clientFactory();
   if (!client) {
     return null;
   }
@@ -741,7 +742,8 @@ async function correctEscapedStringsWithLLM(
             "  </response>\n" +
             "</output_format>"
         }
-      ]
+      ],
+      ...buildThinkingRequestOptions(thinkingEnabled, baseURL, reasoningEffort)
     });
 
     const content = response.choices?.[0]?.message?.content ?? "";

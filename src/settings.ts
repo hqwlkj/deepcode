@@ -5,9 +5,12 @@ export type DeepcodingEnv = {
   THINKING?: string;
 };
 
+export type ReasoningEffort = "high" | "max";
+
 export type DeepcodingSettings = {
   env?: DeepcodingEnv;
   thinkingEnabled?: boolean;
+  reasoningEffort?: ReasoningEffort;
   notify?: string;
   webSearchTool?: string;
 };
@@ -17,9 +20,14 @@ export type ResolvedDeepcodingSettings = {
   baseURL: string;
   model: string;
   thinkingEnabled: boolean;
+  reasoningEffort: ReasoningEffort;
   notify?: string;
   webSearchTool?: string;
 };
+
+function resolveReasoningEffort(value: unknown): ReasoningEffort {
+  return value === "high" || value === "max" ? value : "max";
+}
 
 export function resolveSettings(
   settings: DeepcodingSettings | null | undefined,
@@ -38,6 +46,7 @@ export function resolveSettings(
       typeof settings?.thinkingEnabled === "boolean"
         ? settings.thinkingEnabled
         : String(env.THINKING ?? "").toLowerCase() === "enabled",
+    reasoningEffort: resolveReasoningEffort(settings?.reasoningEffort),
     notify: notify || undefined,
     webSearchTool: webSearchTool || undefined
   };

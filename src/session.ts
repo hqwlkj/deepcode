@@ -502,7 +502,7 @@ ${skillMd}
 
   async activateSession(sessionId: string): Promise<void> {
     const startedAt = Date.now();
-    const { client, model, baseURL, thinkingEnabled, notify } = this.createOpenAIClient();
+    const { client, model, baseURL, thinkingEnabled, reasoningEffort, notify } = this.createOpenAIClient();
     const now = new Date().toISOString();
 
     if (!client) {
@@ -552,7 +552,7 @@ ${skillMd}
         }
 
         const messages = this.buildOpenAIMessages(this.listSessionMessages(sessionId));
-        const thinkingOptions = buildThinkingRequestOptions(thinkingEnabled, baseURL);
+        const thinkingOptions = buildThinkingRequestOptions(thinkingEnabled, baseURL, reasoningEffort);
         const response = await client.chat.completions.create(
             {
               model,
@@ -652,7 +652,7 @@ ${skillMd}
   }
 
   async compactSession(sessionId: string): Promise<void> {
-    const { client, model, baseURL, thinkingEnabled } = this.createOpenAIClient();
+    const { client, model, baseURL, thinkingEnabled, reasoningEffort } = this.createOpenAIClient();
     if (!client) {
       return;
     }
@@ -681,7 +681,7 @@ ${skillMd}
     }
 
     const compactPrompt = getCompactPrompt(sessionMessages.slice(startIndex, endIndex));
-    const thinkingOptions = buildThinkingRequestOptions(thinkingEnabled, baseURL);
+    const thinkingOptions = buildThinkingRequestOptions(thinkingEnabled, baseURL, reasoningEffort);
     const response = await client.chat.completions.create({
       model,
       messages: [{ role: "user", content: compactPrompt }],

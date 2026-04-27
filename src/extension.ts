@@ -5,7 +5,7 @@ import * as os from "os";
 import OpenAI from "openai";
 import MarkdownIt from "markdown-it";
 import { SessionManager, SessionMessage, type SkillInfo, type UserPromptContent } from "./session";
-import { resolveSettings, type DeepcodingSettings } from "./settings";
+import { resolveSettings, type DeepcodingSettings, type ReasoningEffort } from "./settings";
 
 const DEFAULT_MODEL = "deepseek-v4-pro";
 const DEFAULT_BASE_URL = "https://api.deepseek.com";
@@ -290,17 +290,27 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     model: string;
     baseURL: string;
     thinkingEnabled: boolean;
+    reasoningEffort: ReasoningEffort;
     notify?: string;
     webSearchTool?: string;
     machineId?: string;
   } {
     const settings = this.resolveCurrentSettings();
 
-    const { apiKey, baseURL, model, thinkingEnabled, notify, webSearchTool } = settings;
+    const { apiKey, baseURL, model, thinkingEnabled, reasoningEffort, notify, webSearchTool } = settings;
     const machineId = vscode.env.machineId;
 
     if (!apiKey) {
-      return { client: null, model, baseURL, thinkingEnabled, notify, webSearchTool, machineId };
+      return {
+        client: null,
+        model,
+        baseURL,
+        thinkingEnabled,
+        reasoningEffort,
+        notify,
+        webSearchTool,
+        machineId
+      };
     }
 
     const client = new OpenAI({
@@ -308,7 +318,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       baseURL: baseURL || undefined
     });
 
-    return { client, model, baseURL, thinkingEnabled, notify, webSearchTool, machineId };
+    return { client, model, baseURL, thinkingEnabled, reasoningEffort, notify, webSearchTool, machineId };
   }
 
   private resolveCurrentSettings() {

@@ -1,4 +1,5 @@
 import type OpenAI from "openai";
+import type { ReasoningEffort } from "../settings";
 import { handleAskUserQuestionTool } from "./ask-user-question-handler";
 import { handleBashTool } from "./bash-handler";
 import { handleEditTool } from "./edit-handler";
@@ -11,6 +12,7 @@ export type CreateOpenAIClient = () => {
   model: string;
   baseURL?: string;
   thinkingEnabled: boolean;
+  reasoningEffort?: ReasoningEffort;
   notify?: string;
   webSearchTool?: string;
   machineId?: string;

@@ -14,6 +14,7 @@ Create `~/.deepcode/settings.json` with:
     "API_KEY": "sk-..."
   },
   "thinkingEnabled": true,
+  "reasoningEffort": "max",
   "notify": "~/.deepcode/notify.sh"
 }
 ```

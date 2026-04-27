@@ -229,6 +229,7 @@ Persist state and notify the webview
     "MODEL": "deepseek-v4-pro"
   },
   "thinkingEnabled": true,
+  "reasoningEffort": "max",
   "notify": "~/.deepcode/notify.sh"
 }
 ```
@@ -241,6 +242,7 @@ Persist state and notify the webview
 | `env.BASE_URL` | string | No | `https://api.deepseek.com` | Base URL for a DeepSeek or other OpenAI-compatible endpoint |
 | `env.MODEL` | string | No | `deepseek-v4-pro` | Model identifier passed to `chat.completions.create()` |
 | `thinkingEnabled` | boolean | No | false | Enables the optional `thinking` request field when set to `true` |
+| `reasoningEffort` | `"high"` or `"max"` | No | `"max"` | Controls DeepSeek thinking strength via `reasoning_effort` when thinking mode is enabled |
 | `notify` | string | No | - | Executable script path triggered when a task ends in `completed` or `failed`, with `DURATION` set to the elapsed seconds |
 
 ---

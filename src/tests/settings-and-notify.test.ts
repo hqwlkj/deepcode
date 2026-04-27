@@ -12,6 +12,7 @@ test("resolveSettings reads top-level thinkingEnabled, notify, and webSearchTool
         API_KEY: "sk-test"
       },
       thinkingEnabled: true,
+      reasoningEffort: "high",
       notify: "  /tmp/notify.sh  ",
       webSearchTool: "  /tmp/web-search.sh  "
     },
@@ -25,11 +26,12 @@ test("resolveSettings reads top-level thinkingEnabled, notify, and webSearchTool
   assert.equal(resolved.baseURL, "https://example.com/v1");
   assert.equal(resolved.apiKey, "sk-test");
   assert.equal(resolved.thinkingEnabled, true);
+  assert.equal(resolved.reasoningEffort, "high");
   assert.equal(resolved.notify, "/tmp/notify.sh");
   assert.equal(resolved.webSearchTool, "/tmp/web-search.sh");
 });
 
-test("resolveSettings still accepts legacy env.THINKING when thinkingEnabled is absent", () => {
+test("resolveSettings still accepts legacy env.THINKING and defaults reasoning effort when absent", () => {
   const resolved = resolveSettings(
     {
       env: {
@@ -43,8 +45,23 @@ test("resolveSettings still accepts legacy env.THINKING when thinkingEnabled is 
   );
 
   assert.equal(resolved.thinkingEnabled, true);
+  assert.equal(resolved.reasoningEffort, "max");
   assert.equal(resolved.model, "default-model");
   assert.equal(resolved.baseURL, "https://default.example.com");
+});
+
+test("resolveSettings defaults invalid reasoning effort to max", () => {
+  const resolved = resolveSettings(
+    {
+      reasoningEffort: "medium" as never
+    },
+    {
+      model: "default-model",
+      baseURL: "https://default.example.com"
+    }
+  );
+
+  assert.equal(resolved.reasoningEffort, "max");
 });
 
 test("formatDurationSeconds preserves sub-second precision and trims trailing zeros", () => {
