@@ -11,6 +11,15 @@ import { ToolExecutor, type CreateOpenAIClient } from "./tools/executor";
 
 const MAX_SESSION_ENTRIES = 50;
 const DEFAULT_NEW_PROMPT_API_URL = "https://deepcode.vegamo.cn/api/plugin/new";
+const DEFAULT_COMPACT_PROMPT_TOKEN_THRESHOLD = 128 * 1024;
+const DEEPSEEK_V4_COMPACT_PROMPT_TOKEN_THRESHOLD = 512 * 1024;
+const DEEPSEEK_V4_MODELS = new Set(["deepseek-v4-flash", "deepseek-v4-pro"]);
+
+function getCompactPromptTokenThreshold(model: string): number {
+  return DEEPSEEK_V4_MODELS.has(model)
+    ? DEEPSEEK_V4_COMPACT_PROMPT_TOKEN_THRESHOLD
+    : DEFAULT_COMPACT_PROMPT_TOKEN_THRESHOLD;
+}
 
 export type SessionStatus =
   | "failed"
@@ -534,7 +543,8 @@ ${skillMd}
           return;
         }
 
-        if (((session.usage as { prompt_tokens: number })?.prompt_tokens || 0) > 128 * 1024) {
+        const compactPromptTokenThreshold = getCompactPromptTokenThreshold(model);
+        if (((session.usage as { prompt_tokens: number })?.prompt_tokens || 0) > compactPromptTokenThreshold) {
           const message = this.buildAssistantMessage(sessionId, "The conversation is getting long, compacting...", null);
           message.meta = { asThinking: true };
           this.onAssistantMessage(message, false);
