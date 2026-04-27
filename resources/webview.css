@@ -784,7 +784,7 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: calc(var(--prompt-min-height) + 34px);
+  min-height: calc(var(--prompt-min-height) + 42px);
   border-radius: 4px;
   border: 1px solid var(--border-color);
   background: var(--vscode-input-background);
@@ -812,7 +812,7 @@ body {
 
 .composer-footer {
   display: flex;
-  height: 34px;
+  height: 42px;
   width: 100%;
   align-items: center;
   justify-content: space-between;
@@ -937,8 +937,8 @@ textarea::placeholder {
 
 /* Send Button */
 .send-button {
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   border-radius: 4px;
   border: none;
   cursor: pointer;
@@ -1046,8 +1046,8 @@ textarea::placeholder {
 }
 
 .send-icon {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   fill: currentColor;
   color: var(--vscode-foreground);
   transition: opacity 0.2s;
@@ -1192,7 +1192,7 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: calc(100% - 52px);
+  width: calc(100% - 60px);
 }
 
 /* Skills Tags */

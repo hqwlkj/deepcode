@@ -120,6 +120,12 @@
   let lastHistoryRecordText = "";
   let lastHistoryRecordAt = 0;
 
+  function exitHistoryBrowsing() {
+    if (historyCursor === -1) return;
+    historyCursor = -1;
+    draftBeforeHistory = null;
+  }
+
   let currentSessionId = null;
   let currentSessionStatus = null;
   let allSessions = [];
@@ -1415,6 +1421,7 @@
   });
 
   promptInput.addEventListener("input", () => {
+    exitHistoryBrowsing(); // any text modification exits history browsing mode
     autoResizePrompt();
     updateSendIconState();
     // 保存输入内容
@@ -1520,6 +1527,12 @@
       } else {
         promptInput.setSelectionRange(len, len);
       }
+    }
+
+    // Exit history browsing mode on any non-ArrowUp/ArrowDown key
+    if (historyCursor !== -1 && event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      exitHistoryBrowsing();
+      // fall through — let the key event continue normally (typing, Enter, Backspace, etc.)
     }
 
     function navigateHistory(direction) {
