@@ -963,7 +963,7 @@ textarea::placeholder {
   height: 14px;
   border-radius: 50%;
   background:
-    radial-gradient(circle at center, var(--vscode-input-background) 48%, transparent 50%),
+    radial-gradient(circle at center, var(--vscode-input-background) 36%, transparent 38%),
     conic-gradient(
       var(--vscode-descriptionForeground) 0 var(--context-percent),
       var(--vscode-editorWidget-border, var(--vscode-panel-border)) var(--context-percent) 100%

@@ -183,7 +183,7 @@
     if (!Number.isFinite(activeTokens) || !Number.isFinite(threshold) || threshold <= 0) {
       return 0;
     }
-    return Math.trunc(2.0 * activeTokens / threshold * 100);
+    return Math.trunc(0.5 * activeTokens / threshold * 100);
   }
 
   function formatTokenCount(value) {
