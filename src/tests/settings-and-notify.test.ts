@@ -50,6 +50,68 @@ test("resolveSettings still accepts legacy env.THINKING and defaults reasoning e
   assert.equal(resolved.baseURL, "https://default.example.com");
 });
 
+test("resolveSettings defaults DeepSeek v4 models to thinking mode", () => {
+  const resolved = resolveSettings(
+    {
+      env: {
+        MODEL: "deepseek-v4-flash"
+      }
+    },
+    {
+      model: "default-model",
+      baseURL: "https://default.example.com"
+    }
+  );
+
+  assert.equal(resolved.thinkingEnabled, true);
+});
+
+test("resolveSettings applies thinking defaults to the fallback model", () => {
+  const resolved = resolveSettings(
+    {},
+    {
+      model: "deepseek-v4-pro",
+      baseURL: "https://default.example.com"
+    }
+  );
+
+  assert.equal(resolved.model, "deepseek-v4-pro");
+  assert.equal(resolved.thinkingEnabled, true);
+});
+
+test("resolveSettings keeps thinking mode off by default for other models", () => {
+  const resolved = resolveSettings(
+    {
+      env: {
+        MODEL: "deepseek-v3.2"
+      }
+    },
+    {
+      model: "default-model",
+      baseURL: "https://default.example.com"
+    }
+  );
+
+  assert.equal(resolved.thinkingEnabled, false);
+});
+
+test("resolveSettings allows explicit thinkingEnabled to override model defaults", () => {
+  const resolved = resolveSettings(
+    {
+      env: {
+        MODEL: "deepseek-v4-pro"
+      },
+      thinkingEnabled: false
+    },
+    {
+      model: "default-model",
+      baseURL: "https://default.example.com"
+    }
+  );
+
+  assert.equal(resolved.thinkingEnabled, false);
+});
+
 test("resolveSettings defaults invalid reasoning effort to max", () => {
   const resolved = resolveSettings(
     {

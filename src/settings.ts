@@ -1,3 +1,5 @@
+import { defaultsToThinkingMode } from "./model-capabilities";
+
 export type DeepcodingEnv = {
   MODEL?: string;
   BASE_URL?: string;
@@ -29,11 +31,28 @@ function resolveReasoningEffort(value: unknown): ReasoningEffort {
   return value === "high" || value === "max" ? value : "max";
 }
 
+function resolveThinkingEnabled(
+  settings: DeepcodingSettings | null | undefined,
+  model: string
+): boolean {
+  if (typeof settings?.thinkingEnabled === "boolean") {
+    return settings.thinkingEnabled;
+  }
+
+  const legacyThinking = settings?.env?.THINKING;
+  if (typeof legacyThinking === "string" && legacyThinking.trim()) {
+    return legacyThinking.trim().toLowerCase() === "enabled";
+  }
+
+  return defaultsToThinkingMode(model);
+}
+
 export function resolveSettings(
   settings: DeepcodingSettings | null | undefined,
   defaults: { model: string; baseURL: string }
 ): ResolvedDeepcodingSettings {
   const env = settings?.env ?? {};
+  const model = env.MODEL?.trim() || defaults.model;
   const notify = typeof settings?.notify === "string" ? settings.notify.trim() : "";
   const webSearchTool =
     typeof settings?.webSearchTool === "string" ? settings.webSearchTool.trim() : "";
@@ -41,11 +60,8 @@ export function resolveSettings(
   return {
     apiKey: env.API_KEY?.trim(),
     baseURL: env.BASE_URL?.trim() || defaults.baseURL,
-    model: env.MODEL?.trim() || defaults.model,
-    thinkingEnabled:
-      typeof settings?.thinkingEnabled === "boolean"
-        ? settings.thinkingEnabled
-        : String(env.THINKING ?? "").toLowerCase() === "enabled",
+    model,
+    thinkingEnabled: resolveThinkingEnabled(settings, model),
     reasoningEffort: resolveReasoningEffort(settings?.reasoningEffort),
     notify: notify || undefined,
     webSearchTool: webSearchTool || undefined
