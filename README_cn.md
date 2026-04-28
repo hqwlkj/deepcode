@@ -28,9 +28,10 @@ Deep Code 支持 agent skills，允许您扩展助手的能力：
 ### **为 DeepSeek 优化**
 - 专门为 DeepSeek 模型性能调优。
 - 通过使用[上下文缓存](https://api-docs.deepseek.com/guides/kv_cache)来降低成本。
+- 原生支持[思考模式](https://api-docs.deepseek.com/guides/thinking_mode)和思考强度控制。
 
 ## 支持的模型
-- `deepseek-v4-pro`（[思考模式](https://api-docs.deepseek.com/guides/kv_cache)，推荐使用）
+- `deepseek-v4-pro`（推荐使用）
 - `deepseek-v4-flash`
 - `deepseek-v4-pro`
 - `deepseek-chat`

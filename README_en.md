@@ -28,12 +28,12 @@ Deep Code supports agent skills that allows you to extend the assistant's capabi
 ### **Optimized for DeepSeek**
 - Specifically tuned for DeepSeek model performance.
 - Reduce costs by using [Context Caching](https://api-docs.deepseek.com/guides/kv_cache).
+- Natively supports [Thinking Mode](https://api-docs.deepseek.com/guides/thinking_mode) and Thinking Effort Control.
 
 ## Supported Models
 
-- `deepseek-v4-pro` ([thinking mode](https://api-docs.deepseek.com/guides/kv_cache), recommended)
+- `deepseek-v4-pro` (Recommended)
 - `deepseek-v4-flash`
-- `deepseek-v4-pro`
 - `deepseek-chat`
 - Any other OpenAI-compatible model
 
