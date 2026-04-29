@@ -749,6 +749,7 @@ ${skillMd}
       return;
     }
 
+    this.closePendingToolCalls(sessionId, "Previous tool call did not complete.");
     this.reportNewPrompt();
 
     if (userPrompt.text) {
@@ -827,6 +828,7 @@ ${skillMd}
     }));
 
     this.sessionControllers.set(sessionId, sessionController);
+    this.closePendingToolCalls(sessionId, "Previous tool call did not complete.");
 
     try {
       const maxIterations = 80000;  // about 1K RMB cost
@@ -936,6 +938,10 @@ ${skillMd}
     } catch (error) {
       const errMessage = error instanceof Error ? error.message : String(error);
       const aborted = this.isAbortLikeError(error) || sessionController.signal.aborted;
+      this.closePendingToolCalls(
+        sessionId,
+        aborted ? "Interrupted by user." : `Request failed before tool results were recorded: ${errMessage}`
+      );
       this.updateSessionEntry(sessionId, (entry) => ({
         ...entry,
         status: aborted ? "interrupted" : "failed",
