@@ -118,7 +118,7 @@ test("SessionManager preserves empty reasoning content on assistant tool calls",
   assert.equal(openAIMessages[0]?.reasoning_content, "");
 });
 
-test("SessionManager repairs legacy thinking tool calls missing reasoning content", () => {
+test("SessionManager repairs legacy thinking assistant messages missing reasoning content", () => {
   const manager = new SessionManager({
     projectRoot: process.cwd(),
     createOpenAIClient: () => ({
@@ -132,6 +132,18 @@ test("SessionManager repairs legacy thinking tool calls missing reasoning conten
   });
 
   const messages: SessionMessage[] = [
+    {
+      id: "assistant-text",
+      sessionId: "session-1",
+      role: "assistant",
+      content: "hello",
+      contentParams: null,
+      messageParams: null,
+      compacted: false,
+      visible: false,
+      createTime: "2026-01-01T00:00:00.000Z",
+      updateTime: "2026-01-01T00:00:00.000Z"
+    },
     {
       id: "assistant-tool",
       sessionId: "session-1",
@@ -162,8 +174,13 @@ test("SessionManager repairs legacy thinking tool calls missing reasoning conten
   }>;
 
   assert.equal(thinkingMessages[0]?.reasoning_content, "");
+  assert.equal(thinkingMessages[1]?.reasoning_content, "");
   assert.equal(
     Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"),
+    false
+  );
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(nonThinkingMessages[1] ?? {}, "reasoning_content"),
     false
   );
 });
@@ -231,7 +248,7 @@ test("replySession reports a new prompt with the machineId token", async () => {
   assert.equal((fetchCalls[0].init?.headers as Record<string, string>).Token, "machine-id-456");
 });
 
-test("SessionManager accumulates response usage and active tokens", async () => {
+test("SessionManager accumulates response usage and records latest active tokens", async () => {
   const workspace = createTempDir("deepcode-usage-workspace-");
   const home = createTempDir("deepcode-usage-home-");
   process.env.HOME = home;
@@ -263,7 +280,7 @@ test("SessionManager accumulates response usage and active tokens", async () => 
 
   const session = manager.getSession(sessionId);
   const usage = session?.usage as Record<string, any>;
-  assert.equal(session?.activeTokens, 42);
+  assert.equal(session?.activeTokens, 27);
   assert.equal(usage.prompt_tokens, 30);
   assert.equal(usage.completion_tokens, 12);
   assert.equal(usage.total_tokens, 42);
@@ -273,7 +290,7 @@ test("SessionManager accumulates response usage and active tokens", async () => 
   assert.equal(usage.prompt_cache_miss_tokens, 12);
 });
 
-test("SessionManager resets active tokens to compaction usage", async () => {
+test("SessionManager records latest active tokens after compaction", async () => {
   const workspace = createTempDir("deepcode-compact-usage-workspace-");
   const home = createTempDir("deepcode-compact-usage-home-");
   process.env.HOME = home;
@@ -304,7 +321,7 @@ test("SessionManager resets active tokens to compaction usage", async () => {
 
   const session = manager.getSession(sessionId);
   const usage = session?.usage as Record<string, any>;
-  assert.equal(session?.activeTokens, 130);
+  assert.equal(session?.activeTokens, 7);
   assert.equal(usage.prompt_tokens, 140_095);
   assert.equal(usage.completion_tokens, 35);
   assert.equal(usage.total_tokens, 140_130);
