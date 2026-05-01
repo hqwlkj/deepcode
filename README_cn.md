@@ -40,6 +40,18 @@ Deep Code 支持 agent skills，允许您扩展助手的能力：
 
 ![screenshot](resources/deepcode_screenshot.png)
 
+## Deep Code CLI
+
+```bash
+npm install -g @vegamo/deepcode-cli
+```
+
+![intro1](https://raw.githubusercontent.com/lessweb/deepcode-cli/main/resources/intro1.png)
+
+> VSCode插件和CLI共享配置文件和数据，但运行时没有依赖。
+
+- GitHub： https://github.com/lessweb/deepcode-cli
+
 ## 常见问题
 
 ### 如何将 Deep Code 从左侧边栏移动到右侧边栏（Secondary Side Bar）？

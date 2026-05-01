@@ -41,6 +41,18 @@ Deep Code supports agent skills that allows you to extend the assistant's capabi
 
 ![screenshot](resources/deepcode_screenshot.png)
 
+## Deep Code CLI
+
+```bash
+npm install -g @vegamo/deepcode-cli
+```
+
+![intro1](https://raw.githubusercontent.com/lessweb/deepcode-cli/main/resources/intro1.png)
+
+> The VSCode plugin and CLI share configuration and data, but they have no dependencies at runtime.
+
+- GitHub： https://github.com/lessweb/deepcode-cli
+
 ## FAQ
 
 ### How can I move Deep Code from the left sidebar to the right (Secondary Side Bar) in VS Code?
