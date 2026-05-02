@@ -14,6 +14,7 @@ import {
   type UserPromptContent
 } from "./session";
 import { resolveSettings, type DeepcodingSettings, type ReasoningEffort } from "./settings";
+import { setShellIfWindows } from "./tools/shell-utils";
 
 const DEFAULT_MODEL = "deepseek-v4-pro";
 const DEFAULT_BASE_URL = "https://api.deepseek.com";
@@ -450,6 +451,14 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  process.env.NoDefaultCurrentDirectoryInExePath = "1";
+  try {
+    setShellIfWindows();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    void vscode.window.showErrorMessage(message);
+  }
+
   const provider = new DeepcodingViewProvider(context);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(DeepcodingViewProvider.viewType, provider)
