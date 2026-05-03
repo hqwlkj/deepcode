@@ -82,7 +82,7 @@ Deep Code支持多模态，但目前deepseek-v4不支持多模态。有些模型
 ```
 
 ## 获取帮助
-- 在 GitHub Issues 上报告错误或请求功能 (https://github.com/lessweb/deepcode/issues)。
+- 在 GitHub Issues 上报告错误或请求功能 (https://github.com/lessweb/deepcode/issues)
 
 ## 支持我们
 
