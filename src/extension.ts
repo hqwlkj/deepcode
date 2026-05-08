@@ -311,13 +311,14 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     baseURL: string;
     thinkingEnabled: boolean;
     reasoningEffort: ReasoningEffort;
+    debugLogEnabled: boolean;
     notify?: string;
     webSearchTool?: string;
     machineId?: string;
   } {
     const settings = this.resolveCurrentSettings();
 
-    const { apiKey, baseURL, model, thinkingEnabled, reasoningEffort, notify, webSearchTool } = settings;
+    const { apiKey, baseURL, model, thinkingEnabled, reasoningEffort, debugLogEnabled, notify, webSearchTool } = settings;
     const machineId = vscode.env.machineId;
 
     if (!apiKey) {
@@ -327,6 +328,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
         baseURL,
         thinkingEnabled,
         reasoningEffort,
+        debugLogEnabled,
         notify,
         webSearchTool,
         machineId
@@ -338,7 +340,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       baseURL: baseURL || undefined
     });
 
-    return { client, model, baseURL, thinkingEnabled, reasoningEffort, notify, webSearchTool, machineId };
+    return { client, model, baseURL, thinkingEnabled, reasoningEffort, debugLogEnabled, notify, webSearchTool, machineId };
   }
 
   private buildTokenTelemetry(session: SessionEntry | null): {
