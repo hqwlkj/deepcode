@@ -28,7 +28,7 @@ Technical guide for the Deep Code VS Code extension as implemented in the curren
 - Webview-based chat UI with HTML/CSS templates under `resources/`
 - Persistent sessions stored under `~/.deepcode/projects/<projectCode>/`
 - Tool execution pipeline for `bash`, `read`, `write`, `edit`, and `AskUserQuestion`
-- Skill discovery from `~/.agents/skills/` and `./.deepcode/skills/`
+- Skill discovery from `~/.agents/skills/`, `./.agents/skills/`, and legacy `./.deepcode/skills/`
 - DeepSeek-first defaults with configurable OpenAI-compatible API settings
 
 ---

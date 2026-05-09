@@ -23,7 +23,8 @@ Create `~/.deepcode/settings.json` with:
 ### **Skills**
 Deep Code supports agent skills that allows you to extend the assistant's capabilities:
 
-- **Skill Discovery**: skills from `~/.agents/skills/` can be discovered and activated.
+- **User-level Skills**: discovered and activated from `~/.agents/skills/`.
+- **Project-level Skills**: loaded from `./.agents/skills/` for project-specific workflows, with legacy `./.deepcode/skills/` compatibility.
 
 ### **Optimized for DeepSeek**
 - Specifically tuned for DeepSeek model performance.
