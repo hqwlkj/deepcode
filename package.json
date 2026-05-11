@@ -21,7 +21,6 @@
     "out/extension.js",
     "resources/**",
     "docs/tools/**",
-    "docs/prompts/**",
     "README.md",
     "README_cn.md",
     "README_en.md",
@@ -88,7 +87,6 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "ejs": "^5.0.2",
     "zod": "^4.4.3"
   }
 }
