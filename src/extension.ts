@@ -13,7 +13,12 @@ import {
   type SkillInfo,
   type UserPromptContent
 } from "./session";
-import { resolveSettings, type DeepcodingSettings, type ReasoningEffort } from "./settings";
+import {
+  resolveSettingsSources,
+  type DeepcodingSettings,
+  type ReasoningEffort,
+  type ResolvedDeepcodingSettings
+} from "./settings";
 import { setShellIfWindows } from "./common/shell-utils";
 
 const DEFAULT_MODEL = "deepseek-v4-pro";
@@ -74,6 +79,11 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
         });
       }
     });
+    void this.initializeMcpServers();
+  }
+
+  dispose(): void {
+    this.sessionManager.dispose();
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -374,14 +384,28 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     };
   }
 
-  private resolveCurrentSettings() {
-    return resolveSettings(this.readSettings(), {
-      model: DEFAULT_MODEL,
-      baseURL: DEFAULT_BASE_URL
-    });
+  private async initializeMcpServers(): Promise<void> {
+    try {
+      await this.sessionManager.initMcpServers(this.resolveCurrentSettings().mcpServers);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Failed to initialize MCP servers: ${message}`);
+    }
   }
 
-  private readSettings(): DeepcodingSettings | null {
+  private resolveCurrentSettings(): ResolvedDeepcodingSettings {
+    return resolveSettingsSources(
+      this.readUserSettings(),
+      this.readProjectSettings(),
+      {
+        model: DEFAULT_MODEL,
+        baseURL: DEFAULT_BASE_URL
+      },
+      process.env
+    );
+  }
+
+  private readUserSettings(): DeepcodingSettings | null {
     try {
       const settingsPath = path.join(os.homedir(), ".deepcode", "settings.json");
       if (!fs.existsSync(settingsPath)) {
@@ -393,6 +417,23 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(`Failed to read ~/.deepcode/settings.json: ${message}`);
+      return null;
+    }
+  }
+
+  private readProjectSettings(): DeepcodingSettings | null {
+    const workspaceRoot = this.getWorkspaceRoot();
+    try {
+      const settingsPath = path.join(workspaceRoot, ".deepcode", "settings.json");
+      if (!fs.existsSync(settingsPath)) {
+        return null;
+      }
+
+      const raw = fs.readFileSync(settingsPath, "utf8");
+      return JSON.parse(raw) as DeepcodingSettings;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Failed to read ${path.join(workspaceRoot, ".deepcode", "settings.json")}: ${message}`);
       return null;
     }
   }
@@ -474,6 +515,7 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   const provider = new DeepcodingViewProvider(context);
+  context.subscriptions.push(provider);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(DeepcodingViewProvider.viewType, provider)
   );
