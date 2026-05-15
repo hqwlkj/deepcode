@@ -6,6 +6,7 @@ import { handleEditTool } from "./edit-handler";
 import { handleReadTool } from "./read-handler";
 import { handleWebSearchTool } from "./web-search-handler";
 import { handleWriteTool } from "./write-handler";
+import type { McpManager } from "../mcp/mcp-manager";
 
 export type CreateOpenAIClient = () => {
   client: OpenAI | null;
@@ -16,6 +17,7 @@ export type CreateOpenAIClient = () => {
   debugLogEnabled?: boolean;
   notify?: string;
   webSearchTool?: string;
+  env?: Record<string, string>;
   machineId?: string;
 };
 
@@ -73,11 +75,13 @@ export type ToolCallExecution = {
 export class ToolExecutor {
   private readonly projectRoot: string;
   private readonly createOpenAIClient?: CreateOpenAIClient;
+  private readonly mcpManager?: McpManager;
   private readonly toolHandlers = new Map<string, ToolHandler>();
 
-  constructor(projectRoot: string, createOpenAIClient?: CreateOpenAIClient) {
+  constructor(projectRoot: string, createOpenAIClient?: CreateOpenAIClient, mcpManager?: McpManager) {
     this.projectRoot = projectRoot;
     this.createOpenAIClient = createOpenAIClient;
+    this.mcpManager = mcpManager;
     this.registerToolHandlers();
   }
 
@@ -99,7 +103,7 @@ export class ToolExecutor {
       executions.push({
         toolCallId: toolCall.id,
         content: this.formatToolResult(result),
-        result
+        result,
       });
       if (hooks?.shouldStop?.()) {
         break;
@@ -141,16 +145,15 @@ export class ToolExecutor {
       return null;
     }
 
-    const rawArguments =
-      typeof functionRecord.arguments === "string" ? functionRecord.arguments : "";
+    const rawArguments = typeof functionRecord.arguments === "string" ? functionRecord.arguments : "";
 
     return {
       id: record.id,
       type: "function",
       function: {
         name: functionRecord.name,
-        arguments: rawArguments
-      }
+        arguments: rawArguments,
+      },
     };
   }
 
@@ -162,10 +165,16 @@ export class ToolExecutor {
     const toolName = toolCall.function.name;
     const handler = this.toolHandlers.get(toolName);
     if (!handler) {
+      // Try MCP tools
+      if (this.mcpManager?.isMcpTool(toolName)) {
+        const parsedArgs = this.parseToolArguments(toolCall.function.arguments);
+        const args = parsedArgs.ok ? parsedArgs.args : {};
+        return this.mcpManager.executeMcpTool(toolName, args);
+      }
       return {
         ok: false,
         name: toolName,
-        error: `Unknown tool: ${toolName}`
+        error: `Unknown tool: ${toolName}`,
       };
     }
 
@@ -174,7 +183,7 @@ export class ToolExecutor {
       return {
         ok: false,
         name: toolName,
-        error: parsedArgs.error
+        error: parsedArgs.error,
       };
     }
 
@@ -185,14 +194,14 @@ export class ToolExecutor {
         toolCall,
         createOpenAIClient: this.createOpenAIClient,
         onProcessStart: hooks?.onProcessStart,
-        onProcessExit: hooks?.onProcessExit
+        onProcessExit: hooks?.onProcessExit,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
         ok: false,
         name: toolName,
-        error: message
+        error: message,
       };
     }
   }
@@ -216,7 +225,7 @@ export class ToolExecutor {
         ok: false,
         error:
           `InputParseError: Failed to parse tool arguments: ${message}. ` +
-          "Ensure the tool call arguments are valid JSON. Prefer Edit over Write for large existing-file changes."
+          "Ensure the tool call arguments are valid JSON. Prefer Edit over Write for large existing-file changes.",
       };
     }
   }
@@ -224,7 +233,7 @@ export class ToolExecutor {
   private formatToolResult(result: ToolExecutionResult): string {
     const payload: Record<string, unknown> = {
       ok: result.ok,
-      name: result.name
+      name: result.name,
     };
 
     if (typeof result.output !== "undefined") {
@@ -245,5 +254,4 @@ export class ToolExecutor {
 
     return JSON.stringify(payload, null, 2);
   }
-
 }

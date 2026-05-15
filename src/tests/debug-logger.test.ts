@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { getDebugLogPath, logOpenAIChatCompletionDebug } from "../debug-logger";
+import { getDebugLogPath, logOpenAIChatCompletionDebug } from "../common/debug-logger";
 
 test("debug logger appends full entries without rotation", () => {
   const originalHome = process.env.HOME;
@@ -18,11 +18,11 @@ test("debug logger appends full entries without rotation", () => {
         model: "test-model",
         request: {
           model: "test-model",
-          messages: [{ role: "user", content: `full request content ${index}` }]
+          messages: [{ role: "user", content: `full request content ${index}` }],
         },
         response: {
-          choices: [{ message: { content: `full response content ${index}` } }]
-        }
+          choices: [{ message: { content: `full response content ${index}` } }],
+        },
       });
     }
 

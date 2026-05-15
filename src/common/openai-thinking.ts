@@ -1,4 +1,4 @@
-import type { ReasoningEffort } from "./settings";
+import type { ReasoningEffort } from "../settings";
 
 type ThinkingConfig = {
   type: "enabled" | "disabled";
@@ -20,6 +20,6 @@ export function buildThinkingRequestOptions(
 
   return {
     thinking,
-    ...(thinkingEnabled ? { extra_body: { reasoning_effort: reasoningEffort } } : {})
+    ...(thinkingEnabled ? { extra_body: { reasoning_effort: reasoningEffort } } : {}),
   };
 }

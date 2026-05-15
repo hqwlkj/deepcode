@@ -28,7 +28,8 @@ test("WebSearch executes the configured script with the query as one argument", 
     [
       "#!/bin/sh",
       "printf 'query=%s\\n' \"$1\"",
-      "printf 'cwd=%s\\n' \"$PWD\""
+      "printf 'cwd=%s\\n' \"$PWD\"",
+      "printf 'webhook=%s\\n' \"$WEBHOOK\"",
     ].join("\n"),
     "utf8"
   );
@@ -40,17 +41,15 @@ test("WebSearch executes the configured script with the query as one argument", 
     { query: "latest node release" },
     createContext(workspace, {
       webSearchTool: scriptPath,
+      env: { WEBHOOK: "configured" },
       onProcessStart: (id, command) => starts.push({ id, command }),
-      onProcessExit: (id) => exits.push(id)
+      onProcessExit: (id) => exits.push(id),
     })
   );
   const realWorkspace = fs.realpathSync(workspace);
 
   assert.equal(result.ok, true);
-  assert.equal(
-    result.output,
-    `query=latest node release\ncwd=${realWorkspace}\n`
-  );
+  assert.equal(result.output, `query=latest node release\ncwd=${realWorkspace}\nwebhook=configured\n`);
   assert.equal(starts.length, 1);
   assert.match(starts[0].command, /^WebSearch: latest node release$/);
   assert.deepEqual(exits, [starts[0].id]);
@@ -72,15 +71,16 @@ test("WebSearch uses the default API when no script is configured", async () => 
               choices: [
                 {
                   message: {
-                    content: "{\"dominant_language\":\"en\",\"reason\":\"Most Node.js release notes are published in English.\"}"
-                  }
-                }
-              ]
+                    content:
+                      '{"dominant_language":"en","reason":"Most Node.js release notes are published in English."}',
+                  },
+                },
+              ],
             };
           }
           throw new Error(`Unexpected chat prompt: ${prompt}`);
-        }
-      }
+        },
+      },
     },
   } as unknown as OpenAI;
 
@@ -95,14 +95,14 @@ test("WebSearch uses the default API when no script is configured", async () => 
             organic_results: [
               {
                 title: "Node.js Releases",
-                link: "https://nodejs.org/en/about/previous-releases"
-              }
-            ]
+                link: "https://nodejs.org/en/about/previous-releases",
+              },
+            ],
           },
           null,
           2
-        )
-      })
+        ),
+      }),
     } as Response;
   }) as typeof fetch;
 
@@ -112,7 +112,7 @@ test("WebSearch uses the default API when no script is configured", async () => 
       client: fakeClient,
       machineId: "machine-id-123",
       onProcessStart: (id, command) => starts.push({ id, command }),
-      onProcessExit: (id) => exits.push(id)
+      onProcessExit: (id) => exits.push(id),
     })
   );
 
@@ -131,15 +131,12 @@ test("WebSearch uses the default API when no script is configured", async () => 
 
 test("WebSearch returns a configuration error when neither a script nor an LLM client is available", async () => {
   const workspace = createTempWorkspace();
-  const result = await handleWebSearchTool(
-    { query: "latest node release" },
-    createContext(workspace)
-  );
+  const result = await handleWebSearchTool({ query: "latest node release" }, createContext(workspace));
 
   assert.equal(result.ok, false);
   assert.equal(
     result.error,
-    "WebSearch default mode requires a valid LLM configuration in ~/.deepcode/settings.json."
+    "WebSearch default mode requires a valid LLM configuration in ~/.deepcode/settings.json or ./.deepcode/settings.json."
   );
 });
 
@@ -148,6 +145,7 @@ function createContext(
   options: {
     client?: OpenAI | null;
     webSearchTool?: string;
+    env?: Record<string, string>;
     machineId?: string;
     onProcessStart?: (processId: string | number, command: string) => void;
     onProcessExit?: (processId: string | number) => void;
@@ -161,18 +159,19 @@ function createContext(
       type: "function",
       function: {
         name: "WebSearch",
-        arguments: "{}"
-      }
+        arguments: "{}",
+      },
     },
     createOpenAIClient: () => ({
       client: options.client ?? null,
       model: "test-model",
       thinkingEnabled: false,
       webSearchTool: options.webSearchTool,
-      machineId: options.machineId
+      env: options.env,
+      machineId: options.machineId,
     }),
     onProcessStart: options.onProcessStart,
-    onProcessExit: options.onProcessExit
+    onProcessExit: options.onProcessExit,
   };
 }
 

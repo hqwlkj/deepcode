@@ -14,7 +14,7 @@ import {
   type UserPromptContent
 } from "./session";
 import { resolveSettings, type DeepcodingSettings, type ReasoningEffort } from "./settings";
-import { setShellIfWindows } from "./tools/shell-utils";
+import { setShellIfWindows } from "./common/shell-utils";
 
 const DEFAULT_MODEL = "deepseek-v4-pro";
 const DEFAULT_BASE_URL = "https://api.deepseek.com";
@@ -314,11 +314,22 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
     debugLogEnabled: boolean;
     notify?: string;
     webSearchTool?: string;
+    env?: Record<string, string>;
     machineId?: string;
   } {
     const settings = this.resolveCurrentSettings();
 
-    const { apiKey, baseURL, model, thinkingEnabled, reasoningEffort, debugLogEnabled, notify, webSearchTool } = settings;
+    const {
+      apiKey,
+      baseURL,
+      model,
+      thinkingEnabled,
+      reasoningEffort,
+      debugLogEnabled,
+      notify,
+      webSearchTool,
+      env
+    } = settings;
     const machineId = vscode.env.machineId;
 
     if (!apiKey) {
@@ -331,6 +342,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
         debugLogEnabled,
         notify,
         webSearchTool,
+        env,
         machineId
       };
     }
@@ -340,7 +352,7 @@ class DeepcodingViewProvider implements vscode.WebviewViewProvider {
       baseURL: baseURL || undefined
     });
 
-    return { client, model, baseURL, thinkingEnabled, reasoningEffort, debugLogEnabled, notify, webSearchTool, machineId };
+    return { client, model, baseURL, thinkingEnabled, reasoningEffort, debugLogEnabled, notify, webSearchTool, env, machineId };
   }
 
   private buildTokenTelemetry(session: SessionEntry | null): {

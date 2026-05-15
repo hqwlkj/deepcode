@@ -16,13 +16,10 @@ export function formatDurationSeconds(durationMs: number): string {
   return String(Math.floor(safeMs / 1000));
 }
 
-export function buildNotifyEnv(
-  durationMs: number,
-  baseEnv: NodeJS.ProcessEnv = process.env
-): NodeJS.ProcessEnv {
+export function buildNotifyEnv(durationMs: number, baseEnv: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   return {
     ...baseEnv,
-    DURATION: formatDurationSeconds(durationMs)
+    DURATION: formatDurationSeconds(durationMs),
   };
 }
 
@@ -30,7 +27,8 @@ export function launchNotifyScript(
   notifyPath: string | undefined,
   durationMs: number,
   workingDirectory?: string,
-  spawnProcess: NotifySpawn = spawn as unknown as NotifySpawn
+  spawnProcess: NotifySpawn = spawn as unknown as NotifySpawn,
+  configuredEnv: Record<string, string> = {}
 ): void {
   const commandPath = notifyPath?.trim();
   if (!commandPath) {
@@ -40,8 +38,8 @@ export function launchNotifyScript(
   const options = {
     cwd: workingDirectory,
     detached: process.platform !== "win32",
-    env: buildNotifyEnv(durationMs),
-    stdio: "ignore" as const
+    env: buildNotifyEnv(durationMs, { ...process.env, ...configuredEnv }),
+    stdio: "ignore" as const,
   };
 
   try {

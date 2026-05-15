@@ -20,7 +20,8 @@
   "files": [
     "out/extension.js",
     "resources/**",
-    "docs/tools/**",
+    "templates/tools/**",
+    "templates/prompts/**",
     "README.md",
     "README_cn.md",
     "README_en.md",
@@ -75,6 +76,7 @@
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
+    "@types/ejs": "^3.1.5",
     "@types/markdown-it": "^14.1.1",
     "@types/node": "^20.12.7",
     "@types/vscode": "^1.85.0",
@@ -87,6 +89,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "ejs": "^5.0.2",
     "zod": "^4.4.3"
   }
 }
