@@ -7,17 +7,23 @@ import {
   hasFileChangedSinceState,
   normalizeContent,
   readTextFileWithMetadata,
-  writeTextFile,
+  writeTextFile
 } from "../common/file-utils";
 import { executeValidatedTool } from "../common/runtime";
-import { getFileState, isAbsoluteFilePath, isFullFileView, normalizeFilePath, recordFileState } from "../common/state";
+import {
+  getFileState,
+  isAbsoluteFilePath,
+  isFullFileView,
+  normalizeFilePath,
+  recordFileState
+} from "../common/state";
 
 const writeSchema = z.strictObject({
   file_path: z.string().min(1, "file_path is required."),
   content: z.string({
     error:
-      "content must be a string. If you are writing JSON, serialize the full document to text before calling write.",
-  }),
+      "content must be a string. If you are writing JSON, serialize the full document to text before calling write."
+  })
 });
 
 type WriteRepairMetadata = {
@@ -42,7 +48,7 @@ export async function handleWriteTool(
         return {
           ok: false,
           name: "write",
-          error: "file_path must be an absolute path.",
+          error: "file_path must be an absolute path."
         };
       }
 
@@ -56,7 +62,7 @@ export async function handleWriteTool(
           return {
             ok: false,
             name: "write",
-            error: `Failed to stat file: ${message}`,
+            error: `Failed to stat file: ${message}`
           };
         }
 
@@ -64,7 +70,7 @@ export async function handleWriteTool(
           return {
             ok: false,
             name: "write",
-            error: "file_path points to a directory.",
+            error: "file_path points to a directory."
           };
         }
 
@@ -74,7 +80,7 @@ export async function handleWriteTool(
             return {
               ok: false,
               name: "write",
-              error: "Must read the full existing file before writing.",
+              error: "Must read the full existing file before writing."
             };
           }
 
@@ -82,7 +88,7 @@ export async function handleWriteTool(
             return {
               ok: false,
               name: "write",
-              error: "File has been modified since read. Read it again before writing.",
+              error: "File has been modified since read. Read it again before writing."
             };
           }
         }
@@ -95,8 +101,13 @@ export async function handleWriteTool(
 
         const existingMetadata = existingFile ? readTextFileWithMetadata(filePath) : null;
         const encoding = existingMetadata?.encoding ?? "utf8";
-        const lineEndings = existingMetadata?.lineEndings ?? (input.content.includes("\r\n") ? "CRLF" : "LF");
-        const diffPreview = buildDiffPreview(filePath, existingMetadata?.content ?? null, normalizedContent);
+        const lineEndings =
+          existingMetadata?.lineEndings ?? (input.content.includes("\r\n") ? "CRLF" : "LF");
+        const diffPreview = buildDiffPreview(
+          filePath,
+          existingMetadata?.content ?? null,
+          normalizedContent
+        );
         const bytes = writeTextFile(filePath, normalizedContent, encoding, lineEndings);
         const freshMetadata = readTextFileWithMetadata(filePath);
 
@@ -105,7 +116,7 @@ export async function handleWriteTool(
           content: freshMetadata.content,
           timestamp: freshMetadata.timestamp,
           encoding: freshMetadata.encoding,
-          lineEndings: freshMetadata.lineEndings,
+          lineEndings: freshMetadata.lineEndings
         });
 
         return {
@@ -120,21 +131,22 @@ export async function handleWriteTool(
             line_endings: freshMetadata.lineEndings,
             cache_refreshed: true,
             diff_preview: diffPreview,
-            ...repairMetadata,
-          },
+            ...repairMetadata
+          }
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {
           ok: false,
           name: "write",
-          error: message,
+          error: message
         };
       }
     },
     {
       preprocess: (rawInput) => {
-        const filePath = typeof rawInput.file_path === "string" ? normalizeFilePath(rawInput.file_path) : "";
+        const filePath =
+          typeof rawInput.file_path === "string" ? normalizeFilePath(rawInput.file_path) : "";
         const content = rawInput.content;
         if (
           filePath.toLowerCase().endsWith(".json") &&
@@ -144,7 +156,7 @@ export async function handleWriteTool(
         ) {
           repairMetadata = {
             input_repaired: true,
-            repair_kind: "json-stringify-content",
+            repair_kind: "json-stringify-content"
           };
 
           return {
@@ -152,17 +164,18 @@ export async function handleWriteTool(
             input: {
               ...rawInput,
               file_path: filePath,
-              content: JSON.stringify(content, null, 2),
-            },
+              content: JSON.stringify(content, null, 2)
+            }
           };
         }
 
         repairMetadata = null;
         return {
           ok: true,
-          input: typeof rawInput.file_path === "string" ? { ...rawInput, file_path: filePath } : rawInput,
+          input:
+            typeof rawInput.file_path === "string" ? { ...rawInput, file_path: filePath } : rawInput
         };
-      },
+      }
     }
   );
 }

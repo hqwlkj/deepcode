@@ -4,8 +4,14 @@ import * as os from "os";
 import * as path from "path";
 import * as pathWin32 from "path/win32";
 
-const WINDOWS_GIT_LOCATIONS = ["C:\\Program Files\\Git\\cmd\\git.exe", "C:\\Program Files (x86)\\Git\\cmd\\git.exe"];
-const WINDOWS_BASH_LOCATIONS = ["C:\\Program Files\\Git\\bin\\bash.exe", "C:\\Program Files (x86)\\Git\\bin\\bash.exe"];
+const WINDOWS_GIT_LOCATIONS = [
+  "C:\\Program Files\\Git\\cmd\\git.exe",
+  "C:\\Program Files (x86)\\Git\\cmd\\git.exe"
+];
+const WINDOWS_BASH_LOCATIONS = [
+  "C:\\Program Files\\Git\\bin\\bash.exe",
+  "C:\\Program Files (x86)\\Git\\bin\\bash.exe"
+];
 
 const NUL_REDIRECT_REGEX = /(\d?&?>+\s*)[Nn][Uu][Ll](?=\s|$|[|&;)\n])/g;
 let cachedGitBashPath: string | null = null;
@@ -33,7 +39,7 @@ export function findGitBashPath(): string {
   const bashPath = resolveWindowsGitBashPath({
     findExecutableCandidates: findAllWindowsExecutableCandidates,
     findGitExecPath,
-    existsSync: fs.existsSync,
+    existsSync: fs.existsSync
   });
   if (bashPath) {
     cachedGitBashPath = bashPath;
@@ -51,7 +57,7 @@ export function resolveWindowsGitBashPath(lookup: WindowsGitBashLookup): string 
       ...lookup.findExecutableCandidates("bash"),
       ...WINDOWS_BASH_LOCATIONS,
       ...gitExecPathToBashCandidates(lookup.findGitExecPath()),
-      ...lookup.findExecutableCandidates("git").flatMap(gitExecutableToBashCandidates),
+      ...lookup.findExecutableCandidates("git").flatMap(gitExecutableToBashCandidates)
     ],
     lookup.existsSync
   );
@@ -83,9 +89,14 @@ export function getShellKind(shellPath: string): ShellKind {
 export function buildShellInitCommand(shellPath: string): string | null {
   switch (getShellKind(shellPath)) {
     case "zsh":
-      return ['ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"', 'if [ -f "$ZSHRC" ]; then . "$ZSHRC"; fi'].join("; ");
+      return ['ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"', 'if [ -f "$ZSHRC" ]; then . "$ZSHRC"; fi'].join(
+        "; "
+      );
     case "bash":
-      return ['BASHRC="${BASH_ENV:-$HOME/.bashrc}"', 'if [ -f "$BASHRC" ]; then . "$BASHRC"; fi'].join("; ");
+      return [
+        'BASHRC="${BASH_ENV:-$HOME/.bashrc}"',
+        'if [ -f "$BASHRC" ]; then . "$BASHRC"; fi'
+      ].join("; ");
     default:
       return null;
   }
@@ -149,12 +160,15 @@ export function toNativeCwd(shellCwd: string): string {
   return posixPathToWindowsPath(shellCwd);
 }
 
-export function buildShellEnv(shellPath: string, extraEnv: Record<string, string> = {}): NodeJS.ProcessEnv {
+export function buildShellEnv(
+  shellPath: string,
+  extraEnv: Record<string, string> = {}
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     ...extraEnv,
     SHELL: shellPath,
-    GIT_EDITOR: "true",
+    GIT_EDITOR: "true"
   };
 
   if (process.platform === "win32") {
@@ -168,13 +182,17 @@ export function buildShellEnv(shellPath: string, extraEnv: Record<string, string
 
 function findAllWindowsExecutableCandidates(executable: string): string[] {
   const extraCandidates =
-    executable === "git" ? WINDOWS_GIT_LOCATIONS : executable === "bash" ? WINDOWS_BASH_LOCATIONS : [];
+    executable === "git"
+      ? WINDOWS_GIT_LOCATIONS
+      : executable === "bash"
+        ? WINDOWS_BASH_LOCATIONS
+        : [];
 
   try {
     const output = execFileSync("where.exe", [executable], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
-      windowsHide: true,
+      windowsHide: true
     });
     let whereResults = output
       .split(/\r?\n/)
@@ -184,7 +202,9 @@ function findAllWindowsExecutableCandidates(executable: string): string[] {
       // Skip WSL's deprecated bash.exe launcher (C:\Windows\System32\bash.exe).
       // It would start commands inside the Linux distro instead of the Windows host,
       // breaking all path translations and tool invocations.
-      whereResults = whereResults.filter((candidate) => !/system32[\\/]bash\.exe$/i.test(candidate));
+      whereResults = whereResults.filter(
+        (candidate) => !/system32[\\/]bash\.exe$/i.test(candidate)
+      );
     }
     return filterWindowsExecutableCandidates([...whereResults, ...extraCandidates]);
   } catch {
@@ -197,7 +217,7 @@ function findGitExecPath(): string | null {
     const output = execFileSync("git", ["--exec-path"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
-      windowsHide: true,
+      windowsHide: true
     }).trim();
     return output || null;
   } catch {
@@ -213,15 +233,21 @@ function gitExecPathToBashCandidates(execPath: string | null): string[] {
   const normalized = execPath.replace(/\//g, "\\");
   return [
     pathWin32.join(normalized, "..", "..", "..", "bin", "bash.exe"),
-    pathWin32.join(normalized, "..", "..", "bin", "bash.exe"),
+    pathWin32.join(normalized, "..", "..", "bin", "bash.exe")
   ];
 }
 
 function gitExecutableToBashCandidates(gitPath: string): string[] {
-  return [pathWin32.join(gitPath, "..", "..", "bin", "bash.exe"), pathWin32.join(gitPath, "..", "bin", "bash.exe")];
+  return [
+    pathWin32.join(gitPath, "..", "..", "bin", "bash.exe"),
+    pathWin32.join(gitPath, "..", "bin", "bash.exe")
+  ];
 }
 
-function firstExistingWindowsPath(candidates: string[], existsSync: (candidate: string) => boolean): string | null {
+function firstExistingWindowsPath(
+  candidates: string[],
+  existsSync: (candidate: string) => boolean
+): string | null {
   const seen = new Set<string>();
   for (const candidate of candidates) {
     const normalized = pathWin32.resolve(candidate);

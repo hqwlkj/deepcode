@@ -47,7 +47,7 @@ export class McpManager {
         status: "starting",
         connected: false,
         toolCount: 0,
-        tools: [],
+        tools: []
       });
     }
   }
@@ -83,7 +83,7 @@ export class McpManager {
             originalName: tool.name,
             namespacedName,
             definition: tool,
-            client,
+            client
           });
           toolNamespacedNames.push(namespacedName);
         }
@@ -92,7 +92,7 @@ export class McpManager {
           status: "ready",
           connected: true,
           toolCount: serverTools.length,
-          tools: toolNamespacedNames,
+          tools: toolNamespacedNames
         });
       } catch (err) {
         if (this.disposed) break;
@@ -105,7 +105,7 @@ export class McpManager {
           connected: false,
           error: message,
           toolCount: 0,
-          tools: [],
+          tools: []
         });
       }
     }
@@ -121,7 +121,7 @@ export class McpManager {
           status: "starting",
           connected: false,
           toolCount: 0,
-          tools: [],
+          tools: []
         });
       }
     }
@@ -150,9 +150,9 @@ export class McpManager {
           type: "object" as const,
           properties: t.definition.inputSchema.properties,
           required: t.definition.inputSchema.required,
-          additionalProperties: false,
-        },
-      },
+          additionalProperties: false
+        }
+      }
     }));
   }
 
@@ -178,13 +178,13 @@ export class McpManager {
       return {
         ok: !result.isError,
         name,
-        output: text || JSON.stringify(result.content),
+        output: text || JSON.stringify(result.content)
       };
     } catch (err) {
       return {
         ok: false,
         name,
-        error: err instanceof Error ? err.message : String(err),
+        error: err instanceof Error ? err.message : String(err)
       };
     }
   }

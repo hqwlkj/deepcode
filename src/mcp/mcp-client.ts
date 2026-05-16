@@ -58,7 +58,7 @@ export class McpClient {
     return new Promise((resolve, reject) => {
       const childEnv = {
         ...process.env,
-        ...this.env,
+        ...this.env
       };
       const args = this.withNpxYesArg(this.command, this.args);
 
@@ -72,17 +72,21 @@ export class McpClient {
           stdio: ["pipe", "pipe", "pipe"],
           env: childEnv,
           shell: true,
-          windowsHide: true,
+          windowsHide: true
         });
       } else {
         this.process = spawn(this.command, args, {
           stdio: ["pipe", "pipe", "pipe"],
-          env: childEnv,
+          env: childEnv
         });
       }
 
       this.process.on("error", (err) => {
-        reject(this.withStderr(`Failed to start MCP server "${this.serverName}" (${this.command}): ${err.message}`));
+        reject(
+          this.withStderr(
+            `Failed to start MCP server "${this.serverName}" (${this.command}): ${err.message}`
+          )
+        );
       });
 
       this.process.on("close", (code) => {
@@ -111,7 +115,7 @@ export class McpClient {
         {
           protocolVersion: "2024-11-05",
           capabilities: {},
-          clientInfo: { name: "deepcode-cli", version: "0.1.0" },
+          clientInfo: { name: "deepcode-cli", version: "0.1.0" }
         },
         timeoutMs
       )
@@ -132,7 +136,8 @@ export class McpClient {
       const params = cursor ? { cursor } : {};
       const result = (await this.sendRequest("tools/list", params, timeoutMs)) as ListToolsResult;
       tools.push(...(result.tools ?? []));
-      cursor = typeof result.nextCursor === "string" && result.nextCursor ? result.nextCursor : undefined;
+      cursor =
+        typeof result.nextCursor === "string" && result.nextCursor ? result.nextCursor : undefined;
       if (!cursor) {
         return tools;
       }
@@ -156,14 +161,18 @@ export class McpClient {
     }
   }
 
-  private sendRequest(method: string, params: Record<string, unknown>, timeoutMs = 30_000): Promise<unknown> {
+  private sendRequest(
+    method: string,
+    params: Record<string, unknown>,
+    timeoutMs = 30_000
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = this.nextId++;
       const request: JsonRpcRequest = {
         jsonrpc: "2.0",
         id,
         method,
-        params,
+        params
       };
       const timer = setTimeout(() => {
         this.pendingRequests.delete(id);
@@ -182,7 +191,7 @@ export class McpClient {
     const notification = {
       jsonrpc: "2.0" as const,
       method,
-      params,
+      params
     };
     this.writeLine(JSON.stringify(notification));
   }

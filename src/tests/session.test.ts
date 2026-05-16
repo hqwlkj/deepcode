@@ -31,11 +31,11 @@ test("SessionManager preserves structured system content when building OpenAI me
     createOpenAIClient: () => ({
       client: null,
       model: "test-model",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 
   const messages: SessionMessage[] = [
@@ -47,18 +47,22 @@ test("SessionManager preserves structured system content when building OpenAI me
       contentParams: [
         {
           type: "image_url",
-          image_url: { url: "data:image/png;base64,abc123" },
-        },
+          image_url: { url: "data:image/png;base64,abc123" }
+        }
       ],
       messageParams: null,
       compacted: false,
       visible: false,
       createTime: "2026-01-01T00:00:00.000Z",
-      updateTime: "2026-01-01T00:00:00.000Z",
-    },
+      updateTime: "2026-01-01T00:00:00.000Z"
+    }
   ];
 
-  const openAIMessages = (manager as any).buildOpenAIMessages(messages, false, "test-model") as Array<{
+  const openAIMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "test-model"
+  ) as Array<{
     role: string;
     content: unknown;
   }>;
@@ -69,8 +73,8 @@ test("SessionManager preserves structured system content when building OpenAI me
     { type: "text", text: "The read tool has loaded `pixel.png`." },
     {
       type: "image_url",
-      image_url: { url: "data:image/png;base64,abc123" },
-    },
+      image_url: { url: "data:image/png;base64,abc123" }
+    }
   ]);
 });
 
@@ -80,11 +84,11 @@ test("SessionManager filters image content for non-multimodal models", () => {
     createOpenAIClient: () => ({
       client: null,
       model: "deepseek-chat",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "deepseek-chat" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 
   const messages: SessionMessage[] = [
@@ -96,24 +100,30 @@ test("SessionManager filters image content for non-multimodal models", () => {
       contentParams: [
         {
           type: "image_url",
-          image_url: { url: "data:image/png;base64,abc123" },
-        },
+          image_url: { url: "data:image/png;base64,abc123" }
+        }
       ],
       messageParams: null,
       compacted: false,
       visible: false,
       createTime: "2026-01-01T00:00:00.000Z",
-      updateTime: "2026-01-01T00:00:00.000Z",
-    },
+      updateTime: "2026-01-01T00:00:00.000Z"
+    }
   ];
 
-  const openAIMessages = (manager as any).buildOpenAIMessages(messages, false, "deepseek-chat") as Array<{
+  const openAIMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "deepseek-chat"
+  ) as Array<{
     role: string;
     content: unknown;
   }>;
 
   assert.equal(openAIMessages.length, 1);
-  assert.deepEqual(openAIMessages[0]?.content, [{ type: "text", text: "The read tool has loaded `pixel.png`." }]);
+  assert.deepEqual(openAIMessages[0]?.content, [
+    { type: "text", text: "The read tool has loaded `pixel.png`." }
+  ]);
 });
 
 test("SessionManager preserves empty reasoning content on assistant tool calls", () => {
@@ -122,11 +132,11 @@ test("SessionManager preserves empty reasoning content on assistant tool calls",
     createOpenAIClient: () => ({
       client: null,
       model: "test-model",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 
   const message = (manager as any).buildAssistantMessage(
@@ -136,8 +146,8 @@ test("SessionManager preserves empty reasoning content on assistant tool calls",
       {
         id: "call-1",
         type: "function",
-        function: { name: "read", arguments: "{}" },
-      },
+        function: { name: "read", arguments: "{}" }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -147,13 +157,17 @@ test("SessionManager preserves empty reasoning content on assistant tool calls",
       {
         id: "call-1",
         type: "function",
-        function: { name: "read", arguments: "{}" },
-      },
+        function: { name: "read", arguments: "{}" }
+      }
     ],
-    reasoning_content: "",
+    reasoning_content: ""
   });
 
-  const openAIMessages = (manager as any).buildOpenAIMessages([message], true, "test-model") as Array<{
+  const openAIMessages = (manager as any).buildOpenAIMessages(
+    [message],
+    true,
+    "test-model"
+  ) as Array<{
     reasoning_content?: string;
   }>;
 
@@ -166,11 +180,11 @@ test("SessionManager repairs legacy thinking tool calls missing reasoning conten
     createOpenAIClient: () => ({
       client: null,
       model: "test-model",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 
   const messages: SessionMessage[] = [
@@ -185,26 +199,37 @@ test("SessionManager repairs legacy thinking tool calls missing reasoning conten
           {
             id: "call-1",
             type: "function",
-            function: { name: "read", arguments: "{}" },
-          },
-        ],
+            function: { name: "read", arguments: "{}" }
+          }
+        ]
       },
       compacted: false,
       visible: false,
       createTime: "2026-01-01T00:00:00.000Z",
-      updateTime: "2026-01-01T00:00:00.000Z",
-    },
+      updateTime: "2026-01-01T00:00:00.000Z"
+    }
   ];
 
-  const thinkingMessages = (manager as any).buildOpenAIMessages(messages, true, "test-model") as Array<{
+  const thinkingMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    true,
+    "test-model"
+  ) as Array<{
     reasoning_content?: string;
   }>;
-  const nonThinkingMessages = (manager as any).buildOpenAIMessages(messages, false, "test-model") as Array<{
+  const nonThinkingMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "test-model"
+  ) as Array<{
     reasoning_content?: string;
   }>;
 
   assert.equal(thinkingMessages[0]?.reasoning_content, "");
-  assert.equal(Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"), false);
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"),
+    false
+  );
 });
 
 test("SessionManager replays normal assistant messages with reasoning content in thinking mode", () => {
@@ -213,11 +238,11 @@ test("SessionManager replays normal assistant messages with reasoning content in
     createOpenAIClient: () => ({
       client: null,
       model: "test-model",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 
   const messages: SessionMessage[] = [
@@ -231,19 +256,30 @@ test("SessionManager replays normal assistant messages with reasoning content in
       compacted: false,
       visible: true,
       createTime: "2026-01-01T00:00:00.000Z",
-      updateTime: "2026-01-01T00:00:00.000Z",
-    },
+      updateTime: "2026-01-01T00:00:00.000Z"
+    }
   ];
 
-  const thinkingMessages = (manager as any).buildOpenAIMessages(messages, true, "test-model") as Array<{
+  const thinkingMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    true,
+    "test-model"
+  ) as Array<{
     reasoning_content?: string;
   }>;
-  const nonThinkingMessages = (manager as any).buildOpenAIMessages(messages, false, "test-model") as Array<{
+  const nonThinkingMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "test-model"
+  ) as Array<{
     reasoning_content?: string;
   }>;
 
   assert.equal(thinkingMessages[0]?.reasoning_content, "");
-  assert.equal(Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"), false);
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(nonThinkingMessages[0] ?? {}, "reasoning_content"),
+    false
+  );
 });
 
 test("SessionManager normalizes legacy sessions without activeTokens to zero", () => {
@@ -265,9 +301,9 @@ test("SessionManager normalizes legacy sessions without activeTokens to zero", (
           status: "completed",
           usage: { total_tokens: 123 },
           createTime: "2026-01-01T00:00:00.000Z",
-          updateTime: "2026-01-01T00:00:00.000Z",
-        },
-      ],
+          updateTime: "2026-01-01T00:00:00.000Z"
+        }
+      ]
     }),
     "utf8"
   );
@@ -311,15 +347,17 @@ test("SessionManager marks skills loaded from existing session messages", async 
           name: "lessweb-starter",
           path: "~/.agents/skills/lessweb-starter/SKILL.md",
           description: "Create Lessweb projects",
-          isLoaded: true,
-        },
-      },
+          isLoaded: true
+        }
+      }
     })}\n`,
     "utf8"
   );
 
   const manager = createSessionManager(workspace, "machine-id-loaded-skills");
-  const loadedSkill = (await manager.listSkills("loaded-session")).find((skill) => skill.name === "lessweb-starter");
+  const loadedSkill = (await manager.listSkills("loaded-session")).find(
+    (skill) => skill.name === "lessweb-starter"
+  );
 
   assert.equal(loadedSkill?.isLoaded, true);
 });
@@ -407,10 +445,12 @@ rl.on("line", (line) => {
   );
 
   const manager = createSessionManager(workspace, "machine-id-mcp-dispose");
-  const initPromise = manager.initMcpServers({ smoke: { command: process.execPath, args: [serverPath] } });
+  const initPromise = manager.initMcpServers({
+    smoke: { command: process.execPath, args: [serverPath] }
+  });
 
   assert.deepEqual(manager.getMcpStatus(), [
-    { name: "smoke", status: "starting", connected: false, toolCount: 0, tools: [] },
+    { name: "smoke", status: "starting", connected: false, toolCount: 0, tools: [] }
   ]);
 
   await initPromise;
@@ -421,15 +461,15 @@ rl.on("line", (line) => {
       status: "ready",
       connected: true,
       toolCount: 2,
-      tools: ["mcp__smoke__echo", "mcp__smoke__count"],
-    },
+      tools: ["mcp__smoke__echo", "mcp__smoke__count"]
+    }
   ]);
   const mcpManager = (manager as any).mcpManager;
   assert.equal(mcpManager.getMcpToolDefinitions()[0].function.name, "mcp__smoke__echo");
   assert.deepEqual(await mcpManager.executeMcpTool("mcp__smoke__echo", { text: "ok" }), {
     ok: true,
     name: "mcp__smoke__echo",
-    output: "echo:ok",
+    output: "echo:ok"
   });
 
   manager.dispose();
@@ -444,27 +484,31 @@ test("SessionManager reports configured MCP servers as starting before initializ
     createOpenAIClient: () => ({
       client: null,
       model: "test-model",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({
       model: "test-model",
       mcpServers: {
-        playwright: { command: "npx", args: ["@playwright/mcp@latest"] },
-      },
+        playwright: { command: "npx", args: ["@playwright/mcp@latest"] }
+      }
     }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 
   assert.deepEqual(manager.getMcpStatus(), [
-    { name: "playwright", status: "starting", connected: false, toolCount: 0, tools: [] },
+    { name: "playwright", status: "starting", connected: false, toolCount: 0, tools: [] }
   ]);
 });
 
 test("SessionManager reports MCP startup stderr on failure", async () => {
   const workspace = createTempDir("deepcode-mcp-failure-workspace-");
   const serverPath = path.join(workspace, "mcp-server-fail.cjs");
-  fs.writeFileSync(serverPath, 'process.stderr.write("mcp startup boom"); process.exit(7);', "utf8");
+  fs.writeFileSync(
+    serverPath,
+    'process.stderr.write("mcp startup boom"); process.exit(7);',
+    "utf8"
+  );
 
   const manager = createSessionManager(workspace, "machine-id-mcp-failure");
   await manager.initMcpServers({ broken: { command: process.execPath, args: [serverPath] } });
@@ -512,10 +556,13 @@ rl.on("line", (line) => {
 
   const manager = createSessionManager(workspace, "machine-id-mcp-npx");
   await manager.initMcpServers({
-    npxed: { command: fakeNpxPath, args: ["@playwright/mcp@latest"], env: { ARGS_PATH: argsPath } },
+    npxed: { command: fakeNpxPath, args: ["@playwright/mcp@latest"], env: { ARGS_PATH: argsPath } }
   });
 
-  assert.deepEqual(JSON.parse(fs.readFileSync(argsPath, "utf8")) as string[], ["-y", "@playwright/mcp@latest"]);
+  assert.deepEqual(JSON.parse(fs.readFileSync(argsPath, "utf8")) as string[], [
+    "-y",
+    "@playwright/mcp@latest"
+  ]);
   manager.dispose();
 });
 
@@ -526,7 +573,11 @@ test("createSession stores /init and sends the active .deepcode project AGENTS p
   globalThis.fetch = (async () => ({ ok: true, text: async () => "" }) as Response) as typeof fetch;
 
   fs.mkdirSync(path.join(workspace, ".deepcode"), { recursive: true });
-  fs.writeFileSync(path.join(workspace, ".deepcode", "AGENTS.md"), "deepcode project instructions", "utf8");
+  fs.writeFileSync(
+    path.join(workspace, ".deepcode", "AGENTS.md"),
+    "deepcode project instructions",
+    "utf8"
+  );
   fs.writeFileSync(path.join(workspace, "AGENTS.md"), "root project instructions", "utf8");
 
   const manager = createSessionManager(workspace, "machine-id-init-deepcode");
@@ -535,7 +586,11 @@ test("createSession stores /init and sends the active .deepcode project AGENTS p
   const sessionId = await manager.createSession({ text: "/init" });
   const messages = manager.listSessionMessages(sessionId);
   const userMessage = messages.find((message) => message.role === "user");
-  const openAIMessages = (manager as any).buildOpenAIMessages(messages, false, "test-model") as Array<{
+  const openAIMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "test-model"
+  ) as Array<{
     role: string;
     content: string;
   }>;
@@ -567,7 +622,11 @@ test("replySession stores /init and sends the active root project AGENTS path to
   const messages = manager.listSessionMessages(sessionId);
   const userMessages = messages.filter((message) => message.role === "user");
   const replyMessage = userMessages[userMessages.length - 1];
-  const openAIMessages = (manager as any).buildOpenAIMessages(messages, false, "test-model") as Array<{
+  const openAIMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "test-model"
+  ) as Array<{
     role: string;
     content: string;
   }>;
@@ -593,7 +652,11 @@ test("createSession stores /init and sends generate prompt when no project AGENT
   const sessionId = await manager.createSession({ text: "/init" });
   const messages = manager.listSessionMessages(sessionId);
   const userMessage = messages.find((message) => message.role === "user");
-  const openAIMessages = (manager as any).buildOpenAIMessages(messages, false, "test-model") as Array<{
+  const openAIMessages = (manager as any).buildOpenAIMessages(
+    messages,
+    false,
+    "test-model"
+  ) as Array<{
     role: string;
     content: string;
   }>;
@@ -614,7 +677,7 @@ test("createSession reports a new prompt with the machineId token", async () => 
     fetchCalls.push({ input, init });
     return {
       ok: true,
-      text: async () => "",
+      text: async () => ""
     } as Response;
   }) as typeof fetch;
 
@@ -646,7 +709,7 @@ test("replySession reports a new prompt with the machineId token", async () => {
     fetchCalls.push({ input, init });
     return {
       ok: true,
-      text: async () => "",
+      text: async () => ""
     } as Response;
   }) as typeof fetch;
 
@@ -675,7 +738,7 @@ test("replySession preserves raw session messages when a previous tool call is p
   globalThis.fetch = (async () =>
     ({
       ok: true,
-      text: async () => "",
+      text: async () => ""
     }) as Response) as typeof fetch;
 
   const manager = createSessionManager(workspace, "machine-id-pending-tool");
@@ -689,8 +752,8 @@ test("replySession preserves raw session messages when a previous tool call is p
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"sleep 100"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"sleep 100"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -704,7 +767,9 @@ test("replySession preserves raw session messages when a previous tool call is p
   assert.equal(messages[assistantIndex + 1]?.role, "user");
   assert.equal(messages[assistantIndex + 1]?.content, "second prompt");
   assert.equal(
-    messages.some((message) => String(message.content).includes("Previous tool call did not complete.")),
+    messages.some((message) =>
+      String(message.content).includes("Previous tool call did not complete.")
+    ),
     false
   );
 });
@@ -718,8 +783,8 @@ test("buildOpenAIMessages inserts interrupted results for missing tool messages"
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"sleep 100"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"sleep 100"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -752,8 +817,8 @@ test("buildOpenAIMessages keeps only the first non-interrupted tool result for a
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"date"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"date"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -770,7 +835,7 @@ test("buildOpenAIMessages keeps only the first non-interrupted tool result for a
       ok: false,
       name: "bash",
       error: "Previous tool call did not complete.",
-      metadata: { interrupted: true },
+      metadata: { interrupted: true }
     }),
     { name: "bash", arguments: '{"command":"date"}' }
   ) as SessionMessage;
@@ -797,8 +862,8 @@ test("buildOpenAIMessages prefers a later real tool result over an earlier inter
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"date"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"date"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -809,7 +874,7 @@ test("buildOpenAIMessages prefers a later real tool result over an earlier inter
       ok: false,
       name: "bash",
       error: "Previous tool call did not complete.",
-      metadata: { interrupted: true },
+      metadata: { interrupted: true }
     }),
     { name: "bash", arguments: '{"command":"date"}' }
   ) as SessionMessage;
@@ -865,8 +930,8 @@ test("buildOpenAIMessages moves a later paired tool message behind its assistant
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"date"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"date"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -900,13 +965,13 @@ test("buildOpenAIMessages preserves a complete multi-tool happy path", () => {
       {
         id: "call-1",
         type: "function",
-        function: { name: "read", arguments: '{"file_path":"/tmp/a.txt"}' },
+        function: { name: "read", arguments: '{"file_path":"/tmp/a.txt"}' }
       },
       {
         id: "call-2",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"pwd"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"pwd"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -935,11 +1000,15 @@ test("buildOpenAIMessages preserves a complete multi-tool happy path", () => {
     ["assistant", "tool", "tool", "user"]
   );
   assert.deepEqual(
-    openAIMessages.filter((message) => message.role === "tool").map((message) => message.tool_call_id),
+    openAIMessages
+      .filter((message) => message.role === "tool")
+      .map((message) => message.tool_call_id),
     ["call-1", "call-2"]
   );
   assert.equal(
-    openAIMessages.some((message) => message.content.includes("Previous tool call did not complete.")),
+    openAIMessages.some((message) =>
+      message.content.includes("Previous tool call did not complete.")
+    ),
     false
   );
 });
@@ -953,8 +1022,8 @@ test("buildOpenAIMessages preserves a real failed tool result", () => {
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"false"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"false"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -993,13 +1062,13 @@ test("buildOpenAIMessages repairs mixed missing duplicate and orphan tool messag
       {
         id: "call-1",
         type: "function",
-        function: { name: "read", arguments: '{"file_path":"/tmp/missing.txt"}' },
+        function: { name: "read", arguments: '{"file_path":"/tmp/missing.txt"}' }
       },
       {
         id: "call-2",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"pwd"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"pwd"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -1065,8 +1134,8 @@ test("buildOpenAIMessages ignores tool messages that appear before their assista
       {
         id: "call-1",
         type: "function",
-        function: { name: "bash", arguments: '{"command":"date"}' },
-      },
+        function: { name: "bash", arguments: '{"command":"date"}' }
+      }
     ],
     ""
   ) as SessionMessage;
@@ -1103,7 +1172,7 @@ test("SessionManager accumulates response usage while active tokens track the la
       prompt_tokens_details: { cached_tokens: 7 },
       completion_tokens_details: { reasoning_tokens: 3 },
       prompt_cache_hit_tokens: 7,
-      prompt_cache_miss_tokens: 3,
+      prompt_cache_miss_tokens: 3
     }),
     createChatResponse("second", {
       prompt_tokens: 20,
@@ -1112,8 +1181,8 @@ test("SessionManager accumulates response usage while active tokens track the la
       prompt_tokens_details: { cached_tokens: 11 },
       completion_tokens_details: { reasoning_tokens: 4 },
       prompt_cache_hit_tokens: 11,
-      prompt_cache_miss_tokens: 9,
-    }),
+      prompt_cache_miss_tokens: 9
+    })
   ];
   const manager = createMockedClientSessionManager(workspace, responses);
 
@@ -1141,18 +1210,18 @@ test("SessionManager resets active tokens to latest post-compaction response usa
     createChatResponse("large", {
       prompt_tokens: 139_990,
       completion_tokens: 10,
-      total_tokens: 140_000,
+      total_tokens: 140_000
     }),
     createChatResponse("summary", {
       prompt_tokens: 100,
       completion_tokens: 23,
-      total_tokens: 123,
+      total_tokens: 123
     }),
     createChatResponse("after compact", {
       prompt_tokens: 5,
       completion_tokens: 2,
-      total_tokens: 7,
-    }),
+      total_tokens: 7
+    })
   ];
   const manager = createMockedClientSessionManager(workspace, responses);
 
@@ -1193,13 +1262,13 @@ test("SessionManager streams chat completions and counts reasoning progress", as
               usage: {
                 prompt_tokens: 2,
                 completion_tokens: 3,
-                total_tokens: 5,
-              },
-            },
+                total_tokens: 5
+              }
+            }
           ]);
-        },
-      },
-    },
+        }
+      }
+    }
   };
 
   const manager = new SessionManager({
@@ -1208,7 +1277,7 @@ test("SessionManager streams chat completions and counts reasoning progress", as
       client: client as any,
       model: "test-model",
       baseURL: "https://api.deepseek.com",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
@@ -1217,13 +1286,15 @@ test("SessionManager streams chat completions and counts reasoning progress", as
       progressEvents.push({
         phase: progress.phase,
         estimatedTokens: progress.estimatedTokens,
-        formattedTokens: progress.formattedTokens,
+        formattedTokens: progress.formattedTokens
       });
-    },
+    }
   });
 
   const sessionId = await manager.createSession({ text: "" });
-  const assistantMessage = manager.listSessionMessages(sessionId).find((message) => message.role === "assistant");
+  const assistantMessage = manager
+    .listSessionMessages(sessionId)
+    .find((message) => message.role === "assistant");
 
   assert.equal(assistantMessage?.content, "hello");
   assert.equal((assistantMessage?.messageParams as any)?.reasoning_content, "思考");
@@ -1243,7 +1314,11 @@ test("SessionManager cancels skill matching before a session is created", async 
 
   const skillDir = path.join(home, ".agents", "skills", "demo");
   fs.mkdirSync(skillDir, { recursive: true });
-  fs.writeFileSync(path.join(skillDir, "SKILL.md"), "---\nname: demo\ndescription: Demo skill\n---\n# Demo\n", "utf8");
+  fs.writeFileSync(
+    path.join(skillDir, "SKILL.md"),
+    "---\nname: demo\ndescription: Demo skill\n---\n# Demo\n",
+    "utf8"
+  );
 
   // eslint-disable-next-line prefer-const -- must be declared before client which references it
   let manager: SessionManager;
@@ -1253,12 +1328,14 @@ test("SessionManager cancels skill matching before a session is created", async 
         create: async (_request: Record<string, unknown>, options?: { signal?: AbortSignal }) => {
           return new Promise((_resolve, reject) => {
             const signal = options?.signal;
-            signal?.addEventListener("abort", () => reject(new APIUserAbortError()), { once: true });
+            signal?.addEventListener("abort", () => reject(new APIUserAbortError()), {
+              once: true
+            });
             queueMicrotask(() => manager.interruptActiveSession());
           });
-        },
-      },
-    },
+        }
+      }
+    }
   };
 
   manager = createMockedClientSessionManagerWithClient(workspace, client);
@@ -1280,11 +1357,13 @@ test("SessionManager treats OpenAI APIUserAbortError as interrupted", async () =
         create: async (_request: Record<string, unknown>, options?: { signal?: AbortSignal }) => {
           return new Promise((_resolve, reject) => {
             const signal = options?.signal;
-            signal?.addEventListener("abort", () => reject(new APIUserAbortError()), { once: true });
+            signal?.addEventListener("abort", () => reject(new APIUserAbortError()), {
+              once: true
+            });
           });
-        },
-      },
-    },
+        }
+      }
+    }
   };
 
   // eslint-disable-next-line prefer-const -- declared before client, assigned after
@@ -1294,7 +1373,7 @@ test("SessionManager treats OpenAI APIUserAbortError as interrupted", async () =
       client: client as any,
       model: "test-model",
       baseURL: "https://api.deepseek.com",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
@@ -1303,7 +1382,7 @@ test("SessionManager treats OpenAI APIUserAbortError as interrupted", async () =
       if (entry.status === "processing") {
         queueMicrotask(() => manager.interruptActiveSession());
       }
-    },
+    }
   });
 
   await manager.handleUserPrompt({ text: "" });
@@ -1323,15 +1402,18 @@ function createSessionManager(projectRoot: string, machineId: string): SessionMa
       model: "test-model",
       baseURL: "https://api.deepseek.com",
       thinkingEnabled: false,
-      machineId,
+      machineId
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 }
 
-function createMockedClientSessionManager(projectRoot: string, responses: unknown[]): SessionManager {
+function createMockedClientSessionManager(
+  projectRoot: string,
+  responses: unknown[]
+): SessionManager {
   const client = {
     chat: {
       completions: {
@@ -1339,9 +1421,9 @@ function createMockedClientSessionManager(projectRoot: string, responses: unknow
           const response = responses.shift();
           assert.ok(response, "expected a queued chat response");
           return response;
-        },
-      },
-    },
+        }
+      }
+    }
   };
 
   return new SessionManager({
@@ -1350,26 +1432,29 @@ function createMockedClientSessionManager(projectRoot: string, responses: unknow
       client: client as any,
       model: "test-model",
       baseURL: "https://api.deepseek.com",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 }
 
-function createMockedClientSessionManagerWithClient(projectRoot: string, client: unknown): SessionManager {
+function createMockedClientSessionManagerWithClient(
+  projectRoot: string,
+  client: unknown
+): SessionManager {
   return new SessionManager({
     projectRoot,
     createOpenAIClient: () => ({
       client: client as any,
       model: "test-model",
       baseURL: "https://api.deepseek.com",
-      thinkingEnabled: false,
+      thinkingEnabled: false
     }),
     getResolvedSettings: () => ({ model: "test-model" }),
     renderMarkdown: (text) => text,
-    onAssistantMessage: () => {},
+    onAssistantMessage: () => {}
   });
 }
 
@@ -1378,7 +1463,7 @@ class APIUserAbortError extends Error {}
 function createChatResponse(content: string, usage: Record<string, unknown>): unknown {
   return {
     choices: [{ message: { content } }],
-    usage,
+    usage
   };
 }
 
@@ -1398,11 +1483,13 @@ function buildTestMessage(
     compacted: false,
     visible: true,
     createTime: "2026-01-01T00:00:00.000Z",
-    updateTime: "2026-01-01T00:00:00.000Z",
+    updateTime: "2026-01-01T00:00:00.000Z"
   };
 }
 
-async function* createChatStreamResponse(chunks: Record<string, unknown>[]): AsyncGenerator<Record<string, unknown>> {
+async function* createChatStreamResponse(
+  chunks: Record<string, unknown>[]
+): AsyncGenerator<Record<string, unknown>> {
   for (const chunk of chunks) {
     yield chunk;
   }

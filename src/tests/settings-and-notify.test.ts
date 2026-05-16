@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildNotifyEnv, formatDurationSeconds, launchNotifyScript, type NotifySpawn } from "../common/notify";
+import {
+  buildNotifyEnv,
+  formatDurationSeconds,
+  launchNotifyScript,
+  type NotifySpawn
+} from "../common/notify";
 import { applyModelConfigSelection, resolveSettings, resolveSettingsSources } from "../settings";
 
 const TEST_PROCESS_ENV = {};
@@ -11,17 +16,17 @@ test("resolveSettings reads top-level thinkingEnabled, notify, and webSearchTool
       env: {
         MODEL: "deepseek-v3.2",
         BASE_URL: "https://example.com/v1",
-        API_KEY: "sk-test",
+        API_KEY: "sk-test"
       },
       thinkingEnabled: true,
       reasoningEffort: "high",
       debugLogEnabled: true,
       notify: "  /tmp/notify.sh  ",
-      webSearchTool: "  /tmp/web-search.sh  ",
+      webSearchTool: "  /tmp/web-search.sh  "
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -41,12 +46,12 @@ test("resolveSettings gives top-level model priority over env MODEL", () => {
     {
       model: "deepseek-v4-flash",
       env: {
-        MODEL: "deepseek-v4-pro",
-      },
+        MODEL: "deepseek-v4-pro"
+      }
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -60,12 +65,12 @@ test("resolveSettings reads THINKING_ENABLED, REASONING_EFFORT, and DEBUG_LOG_EN
       env: {
         THINKING_ENABLED: "true",
         REASONING_EFFORT: "high",
-        DEBUG_LOG_ENABLED: "true",
-      },
+        DEBUG_LOG_ENABLED: "true"
+      }
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -81,12 +86,12 @@ test("resolveSettings ignores removed legacy env.THINKING", () => {
   const resolved = resolveSettings(
     {
       env: {
-        THINKING: "enabled",
-      },
+        THINKING: "enabled"
+      }
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     {}
   );
@@ -103,33 +108,33 @@ test("resolveSettingsSources applies user, project, and DEEPCODE environment pre
         THINKING_ENABLED: "false",
         REASONING_EFFORT: "high",
         DEBUG_LOG_ENABLED: "false",
-        WEBHOOK: "user-webhook",
+        WEBHOOK: "user-webhook"
       },
       model: "user-top-model",
       thinkingEnabled: true,
       reasoningEffort: "max",
-      debugLogEnabled: true,
+      debugLogEnabled: true
     },
     {
       env: {
         API_KEY: "project-key",
         MODEL: "project-env-model",
         THINKING_ENABLED: "false",
-        DEBUG_LOG_ENABLED: "false",
+        DEBUG_LOG_ENABLED: "false"
       },
       model: "project-top-model",
-      thinkingEnabled: true,
+      thinkingEnabled: true
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     {
       DEEPCODE_MODEL: "system-model",
       DEEPCODE_THINKING_ENABLED: "false",
       DEEPCODE_REASONING_EFFORT: "high",
       DEEPCODE_DEBUG_LOG_ENABLED: "true",
-      DEEPCODE_WEBHOOK: "system-webhook",
+      DEEPCODE_WEBHOOK: "system-webhook"
     }
   );
 
@@ -145,7 +150,7 @@ test("resolveSettingsSources merges MCP env with documented priority", () => {
   const resolved = resolveSettingsSources(
     {
       env: {
-        MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "user-global",
+        MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "user-global"
       },
       mcpServers: {
         github: {
@@ -153,31 +158,31 @@ test("resolveSettingsSources merges MCP env with documented priority", () => {
           args: ["user-server.js"],
           env: {
             GITHUB_PERSONAL_ACCESS_TOKEN: "user-local",
-            USER_ONLY: "1",
-          },
-        },
-      },
+            USER_ONLY: "1"
+          }
+        }
+      }
     },
     {
       env: {
-        MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "project-global",
+        MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "project-global"
       },
       mcpServers: {
         github: {
           command: "python",
           env: {
             GITHUB_PERSONAL_ACCESS_TOKEN: "project-local",
-            PROJECT_ONLY: "1",
-          },
-        },
-      },
+            PROJECT_ONLY: "1"
+          }
+        }
+      }
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     {
-      DEEPCODE_MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "system-global",
+      DEEPCODE_MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "system-global"
     }
   );
 
@@ -187,7 +192,7 @@ test("resolveSettingsSources merges MCP env with documented priority", () => {
     MCP_GITHUB_PERSONAL_ACCESS_TOKEN: "system-global",
     GITHUB_PERSONAL_ACCESS_TOKEN: "system-global",
     USER_ONLY: "1",
-    PROJECT_ONLY: "1",
+    PROJECT_ONLY: "1"
   });
 });
 
@@ -195,12 +200,12 @@ test("resolveSettings defaults DeepSeek v4 models to thinking mode", () => {
   const resolved = resolveSettings(
     {
       env: {
-        MODEL: "deepseek-v4-flash",
-      },
+        MODEL: "deepseek-v4-flash"
+      }
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -213,7 +218,7 @@ test("resolveSettings applies thinking defaults to the fallback model", () => {
     {},
     {
       model: "deepseek-v4-pro",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -226,12 +231,12 @@ test("resolveSettings keeps thinking mode off by default for other models", () =
   const resolved = resolveSettings(
     {
       env: {
-        MODEL: "deepseek-v3.2",
-      },
+        MODEL: "deepseek-v3.2"
+      }
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -243,13 +248,13 @@ test("resolveSettings allows explicit thinkingEnabled to override model defaults
   const resolved = resolveSettings(
     {
       env: {
-        MODEL: "deepseek-v4-pro",
+        MODEL: "deepseek-v4-pro"
       },
-      thinkingEnabled: false,
+      thinkingEnabled: false
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -260,11 +265,11 @@ test("resolveSettings allows explicit thinkingEnabled to override model defaults
 test("resolveSettings defaults invalid reasoning effort to max", () => {
   const resolved = resolveSettings(
     {
-      reasoningEffort: "medium" as never,
+      reasoningEffort: "medium" as never
     },
     {
       model: "default-model",
-      baseURL: "https://default.example.com",
+      baseURL: "https://default.example.com"
     },
     TEST_PROCESS_ENV
   );
@@ -276,19 +281,19 @@ test("applyModelConfigSelection writes model only when the effective model chang
   const result = applyModelConfigSelection(
     {
       env: {
-        MODEL: "deepseek-v4-pro",
+        MODEL: "deepseek-v4-pro"
       },
-      thinkingEnabled: false,
+      thinkingEnabled: false
     },
     {
       model: "deepseek-v4-pro",
       thinkingEnabled: false,
-      reasoningEffort: "max",
+      reasoningEffort: "max"
     },
     {
       model: "deepseek-v4-pro",
       thinkingEnabled: true,
-      reasoningEffort: "high",
+      reasoningEffort: "high"
     }
   );
 
@@ -304,19 +309,19 @@ test("applyModelConfigSelection persists a new selected model and thinking optio
       env: {
         MODEL: "deepseek-v4-pro",
         BASE_URL: "https://api.deepseek.com",
-        API_KEY: "sk-test",
+        API_KEY: "sk-test"
       },
-      thinkingEnabled: false,
+      thinkingEnabled: false
     },
     {
       model: "deepseek-v4-pro",
       thinkingEnabled: false,
-      reasoningEffort: "max",
+      reasoningEffort: "max"
     },
     {
       model: "deepseek-v4-flash",
       thinkingEnabled: true,
-      reasoningEffort: "high",
+      reasoningEffort: "high"
     }
   );
 
@@ -331,20 +336,20 @@ test("applyModelConfigSelection leaves settings untouched when the effective sel
   const result = applyModelConfigSelection(
     {
       env: {
-        MODEL: "deepseek-v4-pro",
+        MODEL: "deepseek-v4-pro"
       },
       thinkingEnabled: true,
-      reasoningEffort: "max",
+      reasoningEffort: "max"
     },
     {
       model: "deepseek-v4-pro",
       thinkingEnabled: true,
-      reasoningEffort: "max",
+      reasoningEffort: "max"
     },
     {
       model: "deepseek-v4-pro",
       thinkingEnabled: true,
-      reasoningEffort: "max",
+      reasoningEffort: "max"
     }
   );
 
@@ -383,11 +388,13 @@ test("launchNotifyScript passes DURATION and falls back to /bin/sh for non-execu
       },
       unref() {
         return undefined;
-      },
+      }
     };
   };
 
-  launchNotifyScript("/tmp/notify.sh", 2750, "/tmp/project", spawnProcess, { WEBHOOK: "configured" });
+  launchNotifyScript("/tmp/notify.sh", 2750, "/tmp/project", spawnProcess, {
+    WEBHOOK: "configured"
+  });
 
   assert.equal(calls.length, 2);
   assert.equal(calls[0]?.command, "/tmp/notify.sh");

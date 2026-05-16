@@ -6,7 +6,7 @@ import {
   buildDiffPreview,
   hasFileChangedSinceState,
   readTextFileWithMetadata,
-  writeTextFile,
+  writeTextFile
 } from "../common/file-utils";
 import { executeValidatedTool, semanticBoolean } from "../common/runtime";
 import {
@@ -16,7 +16,7 @@ import {
   isAbsoluteFilePath,
   isFullFileView,
   normalizeFilePath,
-  recordFileState,
+  recordFileState
 } from "../common/state";
 
 const MAX_CANDIDATE_COUNT = 5;
@@ -77,7 +77,7 @@ const editSchema = z.strictObject({
       return Number(value);
     }
     return value;
-  }, z.number().int().min(1, "expected_occurrences must be >= 1.").optional()),
+  }, z.number().int().min(1, "expected_occurrences must be >= 1.").optional())
 });
 
 export async function handleEditTool(
@@ -98,7 +98,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: 'Missing required "file_path" string or "snippet_id" string.',
+          error: 'Missing required "file_path" string or "snippet_id" string.'
         };
       }
 
@@ -111,7 +111,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "file_path must be an absolute path.",
+          error: "file_path must be an absolute path."
         };
       }
 
@@ -119,7 +119,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: `Unknown snippet_id: ${snippetId}`,
+          error: `Unknown snippet_id: ${snippetId}`
         };
       }
 
@@ -127,7 +127,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "snippet_id does not belong to the provided file_path.",
+          error: "snippet_id does not belong to the provided file_path."
         };
       }
 
@@ -135,7 +135,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "old_string must not be empty.",
+          error: "old_string must not be empty."
         };
       }
 
@@ -143,7 +143,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "new_string must differ from old_string.",
+          error: "new_string must differ from old_string."
         };
       }
 
@@ -151,7 +151,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: `File not found: ${filePath}`,
+          error: `File not found: ${filePath}`
         };
       }
 
@@ -163,7 +163,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: `Failed to stat file: ${message}`,
+          error: `Failed to stat file: ${message}`
         };
       }
 
@@ -171,7 +171,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "file_path points to a directory.",
+          error: "file_path points to a directory."
         };
       }
 
@@ -180,7 +180,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "Must read file before editing.",
+          error: "Must read file before editing."
         };
       }
 
@@ -188,7 +188,8 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "File was only partially read. Use snippet_id or read the full file before editing.",
+          error:
+            "File was only partially read. Use snippet_id or read the full file before editing."
         };
       }
 
@@ -196,7 +197,7 @@ export async function handleEditTool(
         return {
           ok: false,
           name: "edit",
-          error: "File has been modified since read. Read it again before editing.",
+          error: "File has been modified since read. Read it again before editing."
         };
       }
 
@@ -250,11 +251,15 @@ export async function handleEditTool(
             metadata: closestMatch
               ? {
                   scope: formatScopeMetadata(scope),
-                  closest_match: buildClosestMatchMetadata(context.sessionId, filePath, closestMatch),
+                  closest_match: buildClosestMatchMetadata(
+                    context.sessionId,
+                    filePath,
+                    closestMatch
+                  )
                 }
               : {
-                  scope: formatScopeMetadata(scope),
-                },
+                  scope: formatScopeMetadata(scope)
+                }
           };
         }
 
@@ -262,12 +267,13 @@ export async function handleEditTool(
           return {
             ok: false,
             name: "edit",
-            error: "old_string is not unique; use snippet_id, replace_all, or provide more context.",
+            error:
+              "old_string is not unique; use snippet_id, replace_all, or provide more context.",
             metadata: {
               match_count: matches.length,
               scope: formatScopeMetadata(scope),
-              candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches),
-            },
+              candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches)
+            }
           };
         }
 
@@ -276,7 +282,7 @@ export async function handleEditTool(
           replaceAll,
           matchCount: matches.length,
           oldString: replacementOldString,
-          expectedOccurrences,
+          expectedOccurrences
         });
         if (replaceAllGuardError) {
           return {
@@ -286,12 +292,18 @@ export async function handleEditTool(
             metadata: {
               match_count: matches.length,
               scope: formatScopeMetadata(scope),
-              candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches),
-            },
+              candidates: buildCandidateMetadata(context.sessionId, filePath, raw, matches)
+            }
           };
         }
 
-        const updated = applyReplacement(raw, replacementOldString, replacementNewString, matches, replaceAll);
+        const updated = applyReplacement(
+          raw,
+          replacementOldString,
+          replacementNewString,
+          matches,
+          replaceAll
+        );
         const diffPreview = buildDiffPreview(filePath, raw, updated);
         writeTextFile(filePath, updated, metadata.encoding, metadata.lineEndings);
         const freshMetadata = readTextFileWithMetadata(filePath);
@@ -300,7 +312,7 @@ export async function handleEditTool(
           content: freshMetadata.content,
           timestamp: freshMetadata.timestamp,
           encoding: freshMetadata.encoding,
-          lineEndings: freshMetadata.lineEndings,
+          lineEndings: freshMetadata.lineEndings
         });
         const replacedCount = replaceAll ? matches.length : 1;
         return {
@@ -316,15 +328,15 @@ export async function handleEditTool(
             encoding: freshMetadata.encoding,
             line_endings: freshMetadata.lineEndings,
             diff_preview: diffPreview,
-            scope: formatScopeMetadata(scope),
-          },
+            scope: formatScopeMetadata(scope)
+          }
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {
           ok: false,
           name: "edit",
-          error: message,
+          error: message
         };
       }
     },
@@ -338,7 +350,7 @@ export async function handleEditTool(
           nextInput.snippet_id = nextInput.snippet_id.trim();
         }
         return { ok: true, input: nextInput };
-      },
+      }
     }
   );
 }
@@ -377,7 +389,7 @@ function buildSearchScope(
       endOffset: raw.length,
       startLine: 1,
       endLine: lineIndex.lines.length,
-      snippetId: null,
+      snippetId: null
     };
   }
 
@@ -389,7 +401,7 @@ function buildSearchScope(
     endOffset: lineIndex.lineStarts[safeEndLine + 1],
     startLine: safeStartLine,
     endLine: safeEndLine,
-    snippetId: snippet.id,
+    snippetId: snippet.id
   };
 }
 
@@ -417,7 +429,7 @@ function findOccurrences(raw: string, needle: string, scope: SearchScope): Match
       startOffset,
       endOffset,
       startLine: offsetToLine(raw, startOffset),
-      endLine: offsetToLine(raw, Math.max(startOffset, endOffset - 1)),
+      endLine: offsetToLine(raw, Math.max(startOffset, endOffset - 1))
     });
     searchIndex = found + needle.length;
   }
@@ -425,7 +437,11 @@ function findOccurrences(raw: string, needle: string, scope: SearchScope): Match
   return matches;
 }
 
-function findLooseEscapeMatches(raw: string, needle: string, scope: SearchScope): LooseEscapeMatch[] {
+function findLooseEscapeMatches(
+  raw: string,
+  needle: string,
+  scope: SearchScope
+): LooseEscapeMatch[] {
   if (!raw || !needle) {
     return [];
   }
@@ -452,7 +468,7 @@ function findLooseEscapeMatches(raw: string, needle: string, scope: SearchScope)
       startOffset,
       endOffset,
       startLine: offsetToLine(raw, startOffset),
-      endLine: offsetToLine(raw, Math.max(startOffset, endOffset - 1)),
+      endLine: offsetToLine(raw, Math.max(startOffset, endOffset - 1))
     });
   }
 
@@ -486,7 +502,10 @@ function validateReplaceAllGuard(input: {
   }
 
   if (input.expectedOccurrences !== null && input.expectedOccurrences !== input.matchCount) {
-    return `replace_all expected ${input.expectedOccurrences} occurrence(s), ` + `but found ${input.matchCount}.`;
+    return (
+      `replace_all expected ${input.expectedOccurrences} occurrence(s), ` +
+      `but found ${input.matchCount}.`
+    );
   }
 
   const isShortFragment = input.oldString.trim().length < SHORT_REPLACE_ALL_LENGTH;
@@ -539,7 +558,7 @@ function buildCandidateMetadata(
       snippet_id: snippet?.id ?? null,
       start_line: match.startLine,
       end_line: match.endLine,
-      preview,
+      preview
     };
   });
 }
@@ -550,7 +569,13 @@ function buildClosestMatchMetadata(
   closestMatch: ClosestMatch
 ): Record<string, unknown> {
   const preview = formatWithLineNumbers(closestMatch.text.split(/\r?\n/), closestMatch.startLine);
-  const snippet = createSnippet(sessionId, filePath, closestMatch.startLine, closestMatch.endLine, preview);
+  const snippet = createSnippet(
+    sessionId,
+    filePath,
+    closestMatch.startLine,
+    closestMatch.endLine,
+    preview
+  );
 
   return {
     snippet_id: snippet?.id ?? null,
@@ -558,7 +583,7 @@ function buildClosestMatchMetadata(
     end_line: closestMatch.endLine,
     similarity: Number(closestMatch.score.toFixed(3)),
     strategy: closestMatch.strategy,
-    preview,
+    preview
   };
 }
 
@@ -567,7 +592,7 @@ function formatScopeMetadata(scope: SearchScope): Record<string, unknown> {
     file_path: scope.filePath,
     start_line: scope.startLine,
     end_line: scope.endLine,
-    snippet_id: scope.snippetId,
+    snippet_id: scope.snippetId
   };
 }
 
@@ -578,7 +603,9 @@ function buildPreview(raw: string, startLine: number, endLine: number): string {
 }
 
 function formatWithLineNumbers(lines: string[], startLine: number): string {
-  return lines.map((line, index) => `${String(startLine + index).padStart(6, " ")}\t${line}`).join("\n");
+  return lines
+    .map((line, index) => `${String(startLine + index).padStart(6, " ")}\t${line}`)
+    .join("\n");
 }
 
 function findClosestMatch(
@@ -596,7 +623,7 @@ function findClosestMatch(
         startLine: match.startLine,
         endLine: match.endLine,
         score: match.score,
-        strategy: "loose_escape",
+        strategy: "loose_escape"
       };
       if (!bestLooseMatch || candidate.score > bestLooseMatch.score) {
         bestLooseMatch = candidate;
@@ -609,7 +636,9 @@ function findClosestMatch(
   }
 
   const targetLineCount = Math.max(1, oldString.split(/\r?\n/).length);
-  const windowSizes = Array.from(new Set([Math.max(1, targetLineCount - 1), targetLineCount, targetLineCount + 1]));
+  const windowSizes = Array.from(
+    new Set([Math.max(1, targetLineCount - 1), targetLineCount, targetLineCount + 1])
+  );
   const normalizedTarget = normalizeLooseText(oldString);
 
   let bestMatch: ClosestMatch | null = null;
@@ -631,7 +660,7 @@ function findClosestMatch(
         startLine,
         endLine,
         score,
-        strategy: "fuzzy_window",
+        strategy: "fuzzy_window"
       };
 
       if (!bestMatch || candidate.score > bestMatch.score) {
@@ -700,7 +729,7 @@ async function correctEscapedStringsWithLLM(
           content:
             "You correct file-edit strings when the only problem is escaping. " +
             "Return XML only using <response><corrected_old_string>...</corrected_old_string><corrected_new_string>...</corrected_new_string></response>. " +
-            "Do not change semantics; only fix quoting or escaping so corrected_old_string matches the snippet exactly.",
+            "Do not change semantics; only fix quoting or escaping so corrected_old_string matches the snippet exactly."
         },
         {
           role: "user",
@@ -716,10 +745,10 @@ async function correctEscapedStringsWithLLM(
             "    <corrected_old_string><![CDATA[...]]></corrected_old_string>\n" +
             "    <corrected_new_string><![CDATA[...]]></corrected_new_string>\n" +
             "  </response>\n" +
-            "</output_format>",
-        },
+            "</output_format>"
+        }
       ],
-      ...buildThinkingRequestOptions(thinkingEnabled, baseURL, reasoningEffort),
+      ...buildThinkingRequestOptions(thinkingEnabled, baseURL, reasoningEffort)
     });
 
     const content = response.choices?.[0]?.message?.content ?? "";
@@ -765,7 +794,7 @@ function parseCorrectedEditStrings(content: string): CorrectedEditStrings | null
   if (typeof correctedOldString === "string" && typeof correctedNewString === "string") {
     return {
       oldString: correctedOldString,
-      newString: correctedNewString,
+      newString: correctedNewString
     };
   }
 
