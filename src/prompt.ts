@@ -287,7 +287,9 @@ function getCurrentDatePrompt(date = new Date()): string {
 
 export function getSystemPrompt(projectRoot: string, options: PromptToolOptions = {}): string {
   const toolDocs = readToolDocs(getExtensionRoot(), options);
-  const basePrompt = toolDocs ? `${SYSTEM_PROMPT_BASE}\n\n# Available Tools\n\n${toolDocs}` : SYSTEM_PROMPT_BASE;
+  const basePrompt = toolDocs
+    ? `${SYSTEM_PROMPT_BASE}\n\n# Available Tools\n\n${toolDocs}`
+    : SYSTEM_PROMPT_BASE;
   return `${basePrompt}\n\n${getCurrentDatePrompt()}\n\n${getRuntimeContext(projectRoot)}`;
 }
 
@@ -300,7 +302,7 @@ export function getCompactPrompt(sessionMessages: SessionMessage[]): string {
         content: message.content,
         contentParams: message.contentParams,
         messageParams: message.messageParams,
-        createTime: message.createTime,
+        createTime: message.createTime
       })
     )
     .join("\n");
@@ -322,8 +324,8 @@ function getRuntimeContext(projectRoot: string): string {
     ...runtimeVersions,
     "command installed": {
       ripgrep: checkToolInstalled("rg"),
-      jq: checkToolInstalled("jq"),
-    },
+      jq: checkToolInstalled("jq")
+    }
   };
   return `# Local Workspace Environment\n\n\`\`\`json
 ${JSON.stringify(env, null, 2)}
@@ -337,7 +339,7 @@ function checkToolInstalled(tool: string): boolean {
       execFileSync(bashPath, ["-lc", `command -v ${shellSingleQuote(tool)}`], {
         encoding: "utf8",
         stdio: "ignore",
-        windowsHide: true,
+        windowsHide: true
       });
       return true;
     }
@@ -381,7 +383,7 @@ function getCommandVersion(command: string, args: string[]): string | null {
     if (process.platform === "win32") {
       return execFileSync(findGitBashPath(), ["-lc", `${commandText} 2>&1`], {
         encoding: "utf8",
-        windowsHide: true,
+        windowsHide: true
       }).trim();
     }
     return execSync(`${commandText} 2>&1`, { encoding: "utf8" }).trim();
@@ -395,7 +397,7 @@ function getUnameInfo(): string {
     if (process.platform === "win32") {
       return execFileSync(findGitBashPath(), ["-lc", "uname -a"], {
         encoding: "utf8",
-        windowsHide: true,
+        windowsHide: true
       }).trim();
     }
     return execSync("uname -a", { encoding: "utf8" }).trim();
@@ -429,7 +431,10 @@ export type ToolDefinition = {
   };
 };
 
-export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDefinition[] = []): ToolDefinition[] {
+export function getTools(
+  _options: PromptToolOptions = {},
+  externalTools: ToolDefinition[] = []
+): ToolDefinition[] {
   const tools: ToolDefinition[] = [
     {
       type: "function",
@@ -441,18 +446,18 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
           properties: {
             command: {
               type: "string",
-              description: "The shell command to execute",
+              description: "The shell command to execute"
             },
             description: {
               type: "string",
               description:
-                'Clear, concise description of what this command does in active voice. Never use words like "complex" or "risk" in the description - just describe what it does.',
-            },
+                'Clear, concise description of what this command does in active voice. Never use words like "complex" or "risk" in the description - just describe what it does.'
+            }
           },
           required: ["command"],
-          additionalProperties: false,
-        },
-      },
+          additionalProperties: false
+        }
+      }
     },
     {
       type: "function",
@@ -465,17 +470,18 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
           properties: {
             questions: {
               type: "array",
-              description: "Questions to present to the user. Usually only one question is needed at a time.",
+              description:
+                "Questions to present to the user. Usually only one question is needed at a time.",
               items: {
                 type: "object",
                 properties: {
                   question: {
                     type: "string",
-                    description: "The question to ask the user.",
+                    description: "The question to ask the user."
                   },
                   multiSelect: {
                     type: "boolean",
-                    description: "Whether the user may choose multiple options.",
+                    description: "Whether the user may choose multiple options."
                   },
                   options: {
                     type: "array",
@@ -485,26 +491,26 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
                       properties: {
                         label: {
                           type: "string",
-                          description: "The display text for the option.",
+                          description: "The display text for the option."
                         },
                         description: {
                           type: "string",
                           description:
-                            "A detailed explanation or hint about this option to help the user understand what happens if they choose it.",
-                        },
+                            "A detailed explanation or hint about this option to help the user understand what happens if they choose it."
+                        }
                       },
-                      required: ["label"],
-                    },
-                  },
+                      required: ["label"]
+                    }
+                  }
                 },
-                required: ["question", "options"],
-              },
-            },
+                required: ["question", "options"]
+              }
+            }
           },
           required: ["questions"],
-          additionalProperties: false,
-        },
-      },
+          additionalProperties: false
+        }
+      }
     },
     {
       type: "function",
@@ -516,47 +522,50 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
           properties: {
             file_path: {
               type: "string",
-              description: "UNIX-style path to file",
+              description: "UNIX-style path to file"
             },
             offset: {
               type: "number",
-              description: "Line number to start reading from",
+              description: "Line number to start reading from"
             },
             limit: {
               type: "number",
-              description: "Number of lines to read",
+              description: "Number of lines to read"
             },
             pages: {
               type: "string",
-              description: 'Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files.',
-            },
+              description:
+                'Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files.'
+            }
           },
           required: ["file_path"],
-          additionalProperties: false,
-        },
-      },
+          additionalProperties: false
+        }
+      }
     },
     {
       type: "function",
       function: {
         name: "write",
-        description: "Create files or overwrite them with a complete string payload. Prefer edit for existing files.",
+        description:
+          "Create files or overwrite them with a complete string payload. Prefer edit for existing files.",
         parameters: {
           type: "object",
           properties: {
             file_path: {
               type: "string",
-              description: "Absolute path to file",
+              description: "Absolute path to file"
             },
             content: {
               type: "string",
-              description: "Complete file content as a single string. Serialize JSON documents before writing.",
-            },
+              description:
+                "Complete file content as a single string. Serialize JSON documents before writing."
+            }
           },
           required: ["file_path", "content"],
-          additionalProperties: false,
-        },
-      },
+          additionalProperties: false
+        }
+      }
     },
     {
       type: "function",
@@ -568,36 +577,37 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
           properties: {
             file_path: {
               type: "string",
-              description: "Absolute path to file. Optional when snippet_id is provided.",
+              description: "Absolute path to file. Optional when snippet_id is provided."
             },
             snippet_id: {
               type: "string",
               description:
-                "Snippet id returned by the Read or Edit tool to scope the search range after a partial read.",
+                "Snippet id returned by the Read or Edit tool to scope the search range after a partial read."
             },
             old_string: {
               type: "string",
-              description: "Exact text to replace inside the file or snippet scope",
+              description: "Exact text to replace inside the file or snippet scope"
             },
             new_string: {
               type: "string",
-              description: "Replacement text (must differ from old_string)",
+              description: "Replacement text (must differ from old_string)"
             },
             replace_all: {
               type: "boolean",
               description: "Replace all occurences of old_string (default false)",
-              default: false,
+              default: false
             },
             expected_occurrences: {
               type: "number",
-              description: "Expected number of matches, especially useful as a safety check with replace_all",
-            },
+              description:
+                "Expected number of matches, especially useful as a safety check with replace_all"
+            }
           },
           required: ["old_string", "new_string"],
-          additionalProperties: false,
-        },
-      },
-    },
+          additionalProperties: false
+        }
+      }
+    }
   ];
 
   tools.push({
@@ -611,13 +621,13 @@ export function getTools(_options: PromptToolOptions = {}, externalTools: ToolDe
           query: {
             type: "string",
             description:
-              "A search query phrased as a clear, specific natural language question or statement that includes key context.",
-          },
+              "A search query phrased as a clear, specific natural language question or statement that includes key context."
+          }
         },
         required: ["query"],
-        additionalProperties: false,
-      },
-    },
+        additionalProperties: false
+      }
+    }
   });
 
   for (const tool of externalTools) {

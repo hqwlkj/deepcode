@@ -1,9 +1,18 @@
 import * as fs from "fs";
 import * as path from "path";
 import ignore from "ignore";
-import type { ToolExecutionContext, ToolExecutionFollowUpMessage, ToolExecutionResult } from "./executor";
+import type {
+  ToolExecutionContext,
+  ToolExecutionFollowUpMessage,
+  ToolExecutionResult
+} from "./executor";
 import { readTextFileWithMetadata } from "../common/file-utils";
-import { createSnippet, isAbsoluteFilePath, markFileRead, normalizeFilePath } from "../common/state";
+import {
+  createSnippet,
+  isAbsoluteFilePath,
+  markFileRead,
+  normalizeFilePath
+} from "../common/state";
 
 const DEFAULT_LINE_LIMIT = 2000;
 const MAX_LINE_LENGTH = 2000;
@@ -32,7 +41,7 @@ const DEFAULT_GITIGNORE = [
   "*.class",
   "*.jar",
   "*.war",
-  "target/",
+  "target/"
 ];
 
 type PageRange = {
@@ -62,7 +71,7 @@ export async function handleReadTool(
     return {
       ok: false,
       name: "read",
-      error: 'Missing required "file_path" string.',
+      error: 'Missing required "file_path" string.'
     };
   }
 
@@ -71,12 +80,14 @@ export async function handleReadTool(
       return {
         ok: false,
         name: "read",
-        error: "file_path must be an absolute path.",
+        error: "file_path must be an absolute path."
       };
     }
     const normalizedSuffix = normalizeRelativeSuffix(filePath);
     const isIgnored = loadGitignoreMatcher(context.projectRoot);
-    const matches = normalizedSuffix ? findSuffixMatches(context.projectRoot, normalizedSuffix, isIgnored) : [];
+    const matches = normalizedSuffix
+      ? findSuffixMatches(context.projectRoot, normalizedSuffix, isIgnored)
+      : [];
     if (matches.length > 1) {
       return {
         ok: false,
@@ -84,7 +95,7 @@ export async function handleReadTool(
         error:
           "file_path must be an absolute path. " +
           `The file_path is ambiguous and may refer to multiple files:\n${matches.slice(0, 3).join("\n")}` +
-          (matches.length > 3 ? `\n...and ${matches.length - 3} more.` : ""),
+          (matches.length > 3 ? `\n...and ${matches.length - 3} more.` : "")
       };
     }
 
@@ -94,13 +105,14 @@ export async function handleReadTool(
         return {
           ok: false,
           name: "read",
-          error: "file_path must be an absolute path. " + `The file_path "${filePath}" is ambiguous.`,
+          error:
+            "file_path must be an absolute path. " + `The file_path "${filePath}" is ambiguous.`
         };
       } else {
         return {
           ok: false,
           name: "read",
-          error: `File not found: ${filePath}`,
+          error: `File not found: ${filePath}`
         };
       }
     }
@@ -112,7 +124,7 @@ export async function handleReadTool(
     return {
       ok: false,
       name: "read",
-      error: `File not found: ${filePath}`,
+      error: `File not found: ${filePath}`
     };
   }
 
@@ -124,7 +136,7 @@ export async function handleReadTool(
     return {
       ok: false,
       name: "read",
-      error: `Failed to stat file: ${message}`,
+      error: `Failed to stat file: ${message}`
     };
   }
 
@@ -132,7 +144,7 @@ export async function handleReadTool(
     return {
       ok: false,
       name: "read",
-      error: "file_path points to a directory. Use bash ls for directories.",
+      error: "file_path points to a directory. Use bash ls for directories."
     };
   }
 
@@ -143,12 +155,12 @@ export async function handleReadTool(
       markFileRead(context.sessionId, filePath, {
         content: "",
         timestamp: Math.floor(stat.mtimeMs),
-        isPartialView: true,
+        isPartialView: true
       });
       return {
         ok: true,
         name: "read",
-        output,
+        output
       };
     }
 
@@ -162,7 +174,7 @@ export async function handleReadTool(
         return {
           ok: false,
           name: "read",
-          error: `PDF has ${pageCount} pages; provide "pages" to read a range.`,
+          error: `PDF has ${pageCount} pages; provide "pages" to read a range.`
         };
       }
 
@@ -170,7 +182,7 @@ export async function handleReadTool(
         return {
           ok: false,
           name: "read",
-          error: `PDF page range exceeds ${PDF_MAX_PAGE_RANGE} pages.`,
+          error: `PDF page range exceeds ${PDF_MAX_PAGE_RANGE} pages.`
         };
       }
 
@@ -178,7 +190,7 @@ export async function handleReadTool(
         return {
           ok: false,
           name: "read",
-          error: `PDF page range exceeds total page count (${pageCount}).`,
+          error: `PDF page range exceeds total page count (${pageCount}).`
         };
       }
 
@@ -186,7 +198,7 @@ export async function handleReadTool(
       markFileRead(context.sessionId, filePath, {
         content: "",
         timestamp: Math.floor(stat.mtimeMs),
-        isPartialView: true,
+        isPartialView: true
       });
       return {
         ok: true,
@@ -197,8 +209,8 @@ export async function handleReadTool(
           encoding: "base64",
           bytes: buffer.length,
           pageCount,
-          pages: pageRange ? `${pageRange.start}-${pageRange.end}` : null,
-        },
+          pages: pageRange ? `${pageRange.start}-${pageRange.end}` : null
+        }
       };
     }
 
@@ -208,7 +220,7 @@ export async function handleReadTool(
       markFileRead(context.sessionId, filePath, {
         content: "",
         timestamp: Math.floor(stat.mtimeMs),
-        isPartialView: true,
+        isPartialView: true
       });
       return {
         ok: true,
@@ -216,9 +228,9 @@ export async function handleReadTool(
         output: "File loaded.",
         metadata: {
           mime,
-          bytes: buffer.length,
+          bytes: buffer.length
         },
-        followUpMessages: [buildImageFollowUpMessage(filePath, mime, buffer)],
+        followUpMessages: [buildImageFollowUpMessage(filePath, mime, buffer)]
       };
     }
 
@@ -228,14 +240,14 @@ export async function handleReadTool(
       return {
         ok: false,
         name: "read",
-        error: offset.error,
+        error: offset.error
       };
     }
     if (!limit.ok) {
       return {
         ok: false,
         name: "read",
-        error: limit.error,
+        error: limit.error
       };
     }
 
@@ -244,10 +256,12 @@ export async function handleReadTool(
       content: textResult.content,
       timestamp: textResult.timestamp,
       offset: textResult.isPartialView ? textResult.startLine : undefined,
-      limit: textResult.isPartialView ? Math.max(1, textResult.endLine - textResult.startLine + 1) : undefined,
+      limit: textResult.isPartialView
+        ? Math.max(1, textResult.endLine - textResult.startLine + 1)
+        : undefined,
       isPartialView: textResult.isPartialView,
       encoding: textResult.encoding,
-      lineEndings: textResult.lineEndings,
+      lineEndings: textResult.lineEndings
     });
     const snippet = createSnippet(
       context.sessionId,
@@ -266,17 +280,17 @@ export async function handleReadTool(
               id: snippet.id,
               filePath: snippet.filePath,
               startLine: snippet.startLine,
-              endLine: snippet.endLine,
-            },
+              endLine: snippet.endLine
+            }
           }
-        : undefined,
+        : undefined
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
       name: "read",
-      error: message,
+      error: message
     };
   }
 }
@@ -326,7 +340,9 @@ function findSuffixMatches(
   return matches;
 }
 
-function loadGitignoreMatcher(projectRoot: string): ((relPath: string, isDir: boolean) => boolean) | null {
+function loadGitignoreMatcher(
+  projectRoot: string
+): ((relPath: string, isDir: boolean) => boolean) | null {
   const gitignorePath = path.join(projectRoot, ".gitignore");
   if (!fs.existsSync(gitignorePath)) {
     const ig = ignore();
@@ -340,9 +356,18 @@ function loadGitignoreMatcher(projectRoot: string): ((relPath: string, isDir: bo
     };
   }
 
-  let content = "";
   try {
-    content = fs.readFileSync(gitignorePath, "utf8");
+    const content = fs.readFileSync(gitignorePath, "utf8");
+    const ig = ignore();
+    ig.add(DEFAULT_GITIGNORE);
+    ig.add(content);
+    return (relPath: string, isDir: boolean) => {
+      if (!relPath) {
+        return false;
+      }
+      const candidate = isDir ? `${relPath}/` : relPath;
+      return ig.ignores(candidate);
+    };
   } catch {
     const ig = ignore();
     ig.add(DEFAULT_GITIGNORE);
@@ -354,17 +379,6 @@ function loadGitignoreMatcher(projectRoot: string): ((relPath: string, isDir: bo
       return ig.ignores(candidate);
     };
   }
-
-  const ig = ignore();
-  ig.add(DEFAULT_GITIGNORE);
-  ig.add(content);
-  return (relPath: string, isDir: boolean) => {
-    if (!relPath) {
-      return false;
-    }
-    const candidate = isDir ? `${relPath}/` : relPath;
-    return ig.ignores(candidate);
-  };
 }
 
 function parseLineNumber(
@@ -385,7 +399,9 @@ function parseLineNumber(
   return { ok: true, value: integer };
 }
 
-function parseLineLimit(value: unknown): { ok: true; value: number } | { ok: false; error: string } {
+function parseLineLimit(
+  value: unknown
+): { ok: true; value: number } | { ok: false; error: string } {
   if (value === undefined || value === null) {
     return { ok: true, value: DEFAULT_LINE_LIMIT };
   }
@@ -413,7 +429,7 @@ function readTextFile(filePath: string, offset: number | null, limit: number): T
       isPartialView: false,
       encoding: metadata.encoding,
       lineEndings: metadata.lineEndings,
-      timestamp: metadata.timestamp,
+      timestamp: metadata.timestamp
     };
   }
 
@@ -428,7 +444,7 @@ function readTextFile(filePath: string, offset: number | null, limit: number): T
       isPartialView: false,
       encoding: metadata.encoding,
       lineEndings: metadata.lineEndings,
-      timestamp: metadata.timestamp,
+      timestamp: metadata.timestamp
     };
   }
 
@@ -447,7 +463,7 @@ function readTextFile(filePath: string, offset: number | null, limit: number): T
     isPartialView,
     encoding: metadata.encoding,
     lineEndings: metadata.lineEndings,
-    timestamp: metadata.timestamp,
+    timestamp: metadata.timestamp
   };
 }
 
@@ -462,7 +478,19 @@ function formatWithLineNumbers(lines: string[], startLineNumber: number): string
 }
 
 function isImageExtension(ext: string): boolean {
-  return [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".svg", ".ico", ".avif"].includes(ext);
+  return [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".bmp",
+    ".tif",
+    ".tiff",
+    ".svg",
+    ".ico",
+    ".avif"
+  ].includes(ext);
 }
 
 function getImageMimeType(ext: string): string {
@@ -491,20 +519,25 @@ function getImageMimeType(ext: string): string {
   }
 }
 
-function buildImageFollowUpMessage(filePath: string, mime: string, buffer: Buffer): ToolExecutionFollowUpMessage {
+function buildImageFollowUpMessage(
+  filePath: string,
+  mime: string,
+  buffer: Buffer
+): ToolExecutionFollowUpMessage {
   const fileName = path.basename(filePath);
   return {
     role: "system",
     content:
-      `The read tool has loaded \`${fileName}\`. ` + "Use the attached image content to answer the original request.",
+      `The read tool has loaded \`${fileName}\`. ` +
+      "Use the attached image content to answer the original request.",
     contentParams: [
       {
         type: "image_url",
         image_url: {
-          url: `data:${mime};base64,${buffer.toString("base64")}`,
-        },
-      },
-    ],
+          url: `data:${mime};base64,${buffer.toString("base64")}`
+        }
+      }
+    ]
   };
 }
 

@@ -33,7 +33,10 @@ test("getSystemPrompt renders Read docs for non-multimodal models", () => {
 test("runtime prompt assets live under templates", () => {
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "tools", "web-search.md")), true);
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "tools", "read.md.ejs")), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, "templates", "prompts", "init_command.md.ejs")), true);
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, "templates", "prompts", "init_command.md.ejs")),
+    true
+  );
   assert.equal(fs.existsSync(path.join(repoRoot, "templates", "tools", "read.md")), false);
   assert.equal(fs.existsSync(path.join(repoRoot, "docs", "tools")), false);
   assert.equal(fs.existsSync(path.join(repoRoot, "docs", "prompts")), false);

@@ -26,12 +26,18 @@ const fileStatesBySession = new Map<string, Map<string, FileState>>();
 const snippetsBySession = new Map<string, Map<string, FileSnippet>>();
 const snippetCountersBySession = new Map<string, number>();
 
-export function normalizeFilePath(filePath: string, platform: NodeJS.Platform = process.platform): string {
+export function normalizeFilePath(
+  filePath: string,
+  platform: NodeJS.Platform = process.platform
+): string {
   const nativePath = normalizeNativeFilePath(filePath, platform);
   return platform === "win32" ? path.win32.normalize(nativePath) : path.normalize(nativePath);
 }
 
-export function normalizeNativeFilePath(filePath: string, platform: NodeJS.Platform = process.platform): string {
+export function normalizeNativeFilePath(
+  filePath: string,
+  platform: NodeJS.Platform = process.platform
+): string {
   if (platform !== "win32") {
     return filePath;
   }
@@ -43,14 +49,20 @@ export function normalizeNativeFilePath(filePath: string, platform: NodeJS.Platf
   return filePath;
 }
 
-export function isAbsoluteFilePath(filePath: string, platform: NodeJS.Platform = process.platform): boolean {
+export function isAbsoluteFilePath(
+  filePath: string,
+  platform: NodeJS.Platform = process.platform
+): boolean {
   const nativePath = normalizeNativeFilePath(filePath, platform);
   if (platform !== "win32") {
     return path.isAbsolute(nativePath);
   }
 
   const normalized = path.win32.normalize(nativePath);
-  return path.win32.isAbsolute(normalized) && (/^[A-Za-z]:[\\/]/.test(normalized) || /^\\\\/.test(normalized));
+  return (
+    path.win32.isAbsolute(normalized) &&
+    (/^[A-Za-z]:[\\/]/.test(normalized) || /^\\\\/.test(normalized))
+  );
 }
 
 function isGitBashAbsolutePath(filePath: string): boolean {
@@ -71,7 +83,7 @@ export function recordFileState(sessionId: string, state: FileState): void {
   const normalizedPath = normalizeFilePath(state.filePath);
   sessionState.set(normalizedPath, {
     ...state,
-    filePath: normalizedPath,
+    filePath: normalizedPath
   });
 }
 
@@ -92,7 +104,7 @@ export function markFileRead(
     limit: state?.limit,
     isPartialView: state?.isPartialView,
     encoding: state?.encoding,
-    lineEndings: state?.lineEndings,
+    lineEndings: state?.lineEndings
   });
 }
 
@@ -110,7 +122,10 @@ export function wasFileRead(sessionId: string, filePath: string): boolean {
 
 export function isFullFileView(state: FileState | null): boolean {
   return Boolean(
-    state && !state.isPartialView && typeof state.offset === "undefined" && typeof state.limit === "undefined"
+    state &&
+    !state.isPartialView &&
+    typeof state.offset === "undefined" &&
+    typeof state.limit === "undefined"
   );
 }
 
@@ -133,7 +148,7 @@ export function createSnippet(
     filePath: normalizeFilePath(filePath),
     startLine,
     endLine,
-    preview,
+    preview
   };
 
   let snippets = snippetsBySession.get(sessionId);
